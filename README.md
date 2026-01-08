@@ -144,7 +144,22 @@ git --version
 
 ### 安装步骤
 
-#### 1. 克隆项目
+#### 方式一：使用 Makefile（推荐）
+
+```bash
+# 1. 查看所有可用命令
+make help
+
+# 2. 快速开始（自动安装依赖、验证配置、运行测试）
+make quickstart
+
+# 3. 启动开发服务器
+make dev
+```
+
+#### 方式二：手动安装
+
+##### 1. 克隆项目
 
 ```bash
 git clone https://github.com/your-org/ai-dev-scheduler.git
@@ -450,9 +465,84 @@ tail -f logs/ai-scheduler.log
 
 ## 开发指南
 
+### 常用命令（Makefile）
+
+项目提供了 Makefile 来简化常见操作。使用 `make help` 查看所有可用命令。
+
+#### 开发相关
+
+| 命令 | 说明 |
+|------|------|
+| `make help` | 显示帮助信息 |
+| `make quickstart` | 快速开始（安装+验证+测试） |
+| `make init` | 初始化项目 |
+| `make install` | 安装依赖 |
+| `make dev` | 启动开发服务器 |
+| `make validate` | 验证配置文件 |
+| `make info` | 显示项目信息 |
+
+#### 测试相关
+
+| 命令 | 说明 |
+|------|------|
+| `make test` | 运行所有测试 |
+| `make test-fast` | 快速测试（跳过慢速测试） |
+| `make test-unit` | 运行单元测试 |
+| `make test-integration` | 运行集成测试 |
+| `make test-one FILE=tests/test_xxx.py` | 运行特定测试文件 |
+| `make coverage` | 生成测试覆盖率报告 |
+| `make coverage-open` | 在浏览器中查看覆盖率 |
+| `make report` | 生成完整测试报告 |
+
+#### 代码质量
+
+| 命令 | 说明 |
+|------|------|
+| `make lint` | 运行代码检查（flake8） |
+| `make format` | 格式化代码（black） |
+| `make check` | 运行所有代码质量检查 |
+
+#### 日志相关
+
+| 命令 | 说明 |
+|------|------|
+| `make logs` | 查看应用日志（实时） |
+| `make logs-recent` | 查看最近50行日志 |
+| `make logs-error` | 查看错误日志 |
+| `make env` | 显示环境变量配置 |
+
+#### 清理相关
+
+| 命令 | 说明 |
+|------|------|
+| `make clean` | 清理临时文件和缓存 |
+| `make clean-all` | 完全清理（包括虚拟环境） |
+| `make reset` | 重置项目（清理+重新初始化） |
+
+#### Docker 相关
+
+| 命令 | 说明 |
+|------|------|
+| `make docker-build` | 构建 Docker 镜像 |
+| `make docker-run` | 运行 Docker 容器 |
+| `make docker-stop` | 停止 Docker 容器 |
+| `make docker-clean` | 清理 Docker 资源 |
+
 ### 本地开发设置
 
 #### 1. 创建开发环境
+
+**推荐方式（使用 Makefile）**：
+
+```bash
+# 快速开始
+make quickstart
+
+# 启动开发服务器
+make dev
+```
+
+**传统方式**：
 
 ```bash
 # 克隆项目
@@ -477,6 +567,14 @@ cp .env.example .env
 编辑 `.env` 文件，填入开发环境配置。
 
 #### 3. 启动开发服务器
+
+**使用 Makefile**：
+
+```bash
+make dev
+```
+
+**或直接使用脚本**：
 
 ```bash
 # 方式 1: 使用开发脚本
