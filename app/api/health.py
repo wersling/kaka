@@ -23,7 +23,7 @@ class HealthResponse(BaseModel):
     status: str
     service: str = "ai-dev-scheduler"
     version: str = "0.1.0"
-    timestamp: datetime
+    timestamp: str  # 改为字符串类型，使用ISO格式
     uptime_seconds: float
     checks: dict[str, Any]
 
@@ -182,7 +182,7 @@ async def health_check() -> HealthResponse:
 
     response = HealthResponse(
         status="healthy" if all_healthy else "unhealthy",
-        timestamp=datetime.now(),
+        timestamp=datetime.now().isoformat(),
         uptime_seconds=get_uptime(),
         checks=checks,
     )

@@ -195,7 +195,8 @@ class GitService(LoggerMixin):
 
             # 检查推送结果
             for info in push_info:
-                if info.flags & git.remote.ERROR:
+                # 检查是否有错误标志
+                if info.flags & (1 << 0):  # ERROR flag = 1 << 0
                     raise Exception(f"推送失败: {info.summary}")
 
             self.logger.info(f"✅ 推送成功: {branch_name}")

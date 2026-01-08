@@ -6,7 +6,7 @@ AI 开发调度服务 - FastAPI 应用入口
 
 import time
 from contextlib import asynccontextmanager
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -221,7 +221,7 @@ async def github_webhook(
     x_hub_signature_256: str | None = None,
     x_github_event: str | None = None,
     x_github_delivery: str | None = None,
-) -> dict[str, any]:
+) -> dict[str, Any]:
     """
     GitHub Webhook 接收端点
 
