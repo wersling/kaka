@@ -6,6 +6,7 @@ Webhook 验证工具
 
 import hashlib
 import hmac
+import ipaddress
 import os
 from typing import Optional
 
@@ -87,7 +88,7 @@ def _calculate_signature(payload: bytes, secret: str) -> str:
 
 def validate_ip_address(ip: str, whitelist: list[str]) -> bool:
     """
-    验证 IP 地址是否在白名单中
+    验证 IP 地址是否在白名单中（支持 CIDR 表示法）
 
     Args:
         ip: 客户端 IP 地址
@@ -98,13 +99,30 @@ def validate_ip_address(ip: str, whitelist: list[str]) -> bool:
     """
     if not whitelist:
         # 如果白名单为空，则允许所有 IP
-        logger.debug(f"IP 白名单为空，允许访问: {ip}")
+        logger.debug("IP 白名单为空，允许所有访问")
         return True
 
-    # 简单 IP 匹配（不支持 CIDR，如果需要完整 CIDR 支持，可使用 ipaddress 模块）
-    if ip in whitelist:
-        logger.debug(f"IP 在白名单中: {ip}")
-        return True
+    try:
+        client_ip = ipaddress.ip_address(ip)
+    except ValueError:
+        logger.warning(f"无效的 IP 地址: {ip}")
+        return False
+
+    for allowed in whitelist:
+        try:
+            # 支持单个 IP 和 CIDR 范围
+            if "/" in allowed:
+                network = ipaddress.ip_network(allowed, strict=False)
+                if client_ip in network:
+                    logger.debug(f"IP 在白名单中: {ip} (匹配 {allowed})")
+                    return True
+            else:
+                if client_ip == ipaddress.ip_address(allowed):
+                    logger.debug(f"IP 在白名单中: {ip}")
+                    return True
+        except ValueError:
+            logger.warning(f"白名单中无效的 IP/CIDR: {allowed}")
+            continue
 
     logger.warning(f"IP 不在白名单中: {ip}")
     return False
@@ -189,7 +207,7 @@ def validate_comment_trigger(
 
 def sanitize_log_data(data: dict, sensitive_keys: Optional[set[str]] = None) -> dict:
     """
-    清理日志数据，隐藏敏感信息
+    清理日志数据，完全隐藏敏感信息
 
     Args:
         data: 原始数据
@@ -213,11 +231,8 @@ def sanitize_log_data(data: dict, sensitive_keys: Optional[set[str]] = None) -> 
     for key, value in data.items():
         key_lower = key.lower()
         if any(sensitive in key_lower for sensitive in sensitive_keys):
-            # 隐藏敏感值
-            if isinstance(value, str) and len(value) > 8:
-                sanitized[key] = value[:4] + "****" + value[-4:]
-            else:
-                sanitized[key] = "****"
+            # 完全隐藏敏感值，不显示任何字符
+            sanitized[key] = "****"
         elif isinstance(value, dict):
             sanitized[key] = sanitize_log_data(value, sensitive_keys)
         else:

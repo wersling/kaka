@@ -80,6 +80,13 @@ security:
   basic_auth_password: "${BASIC_AUTH_PASSWORD:}"
   # IP 白名单（可选，空列表表示不限制）
   ip_whitelist: []
+  # CORS 允许的来源（重要：生产环境必须限制具体域名）
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8000"
+    # 生产环境示例:
+    # - "https://your-domain.com"
+    # - "https://www.your-domain.com"
 
 # 性能配置
 performance:

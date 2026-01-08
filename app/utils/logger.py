@@ -4,6 +4,7 @@
 提供统一的日志配置和接口
 """
 
+import functools
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
@@ -143,6 +144,7 @@ def log_function_call(logger: Optional[logging.Logger] = None):
     """
 
     def decorator(func):
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             _logger = logger or get_logger()
             _logger.debug(
@@ -170,6 +172,7 @@ def log_async_function_call(logger: Optional[logging.Logger] = None):
     """
 
     def decorator(func):
+        @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             _logger = logger or get_logger()
             _logger.debug(

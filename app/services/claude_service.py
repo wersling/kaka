@@ -1,0 +1,317 @@
+"""
+Claude Code CLI 服务
+
+调用 Claude Code CLI 进行 AI 开发
+"""
+
+import asyncio
+import subprocess
+from pathlib import Path
+from typing import Optional
+
+from app.utils.logger import LoggerMixin, get_logger
+
+logger = get_logger(__name__)
+
+
+class ClaudeService(LoggerMixin):
+    """
+    Claude Code CLI 调用服务
+
+    负责调用 Claude Code CLI 进行 AI 开发任务
+    """
+
+    def __init__(
+        self,
+        repo_path: Optional[Path] = None,
+        claude_cli_path: Optional[str] = None,
+    ):
+        """
+        初始化 Claude 服务
+
+        Args:
+            repo_path: 仓库路径，如果为 None 则从配置读取
+            claude_cli_path: Claude CLI 路径，如果为 None 则从配置读取
+        """
+        from app.config import get_config
+
+        config = get_config()
+
+        self.repo_path = repo_path or config.repository.path
+        self.claude_cli_path = claude_cli_path or config.claude.cli_path
+        self.timeout = config.claude.timeout
+        self.max_retries = config.claude.max_retries
+
+        self.logger.info(
+            f"Claude 服务初始化: "
+            f"CLI={self.claude_cli_path}, "
+            f"超时={self.timeout}s, "
+            f"重试={self.max_retries}"
+        )
+
+    def _build_prompt(
+        self,
+        issue_url: str,
+        issue_title: str,
+        issue_body: str,
+        issue_number: int,
+    ) -> str:
+        """
+        构建发送给 Claude 的提示词
+
+        Args:
+            issue_url: Issue URL
+            issue_title: Issue 标题
+            issue_body: Issue 内容
+            issue_number: Issue 编号
+
+        Returns:
+            str: 构建好的提示词
+        """
+        from app.config import get_config
+
+        config = get_config()
+
+        prompt = f"""请分析以下 GitHub Issue 并完成开发任务：
+
+Issue #{issue_number}: {issue_title}
+Issue URL: {issue_url}
+
+Issue 内容:
+{issue_body or "（无详细描述）"}
+
+任务要求：
+1. 分析需求，理解代码库结构
+2. 生成或修改代码以实现功能
+3. 运行测试确保功能正常
+4. 提交代码（commit message 格式："AI: {issue_title}"）
+
+请按照以下步骤执行：
+- 步骤 1: 理解需求，阅读相关代码
+- 步骤 2: 探索代码库，找到需要修改的文件
+- 步骤 3: 实现功能或修复问题
+- 步骤 4: 运行测试验证（如果有测试）
+- 步骤 5: 使用 git commit 提交变更
+
+注意事项：
+- 遵循项目现有的代码风格
+- 添加必要的文档和注释
+- 确保代码质量（类型提示、错误处理等）
+- 如果遇到问题，请在 commit message 中说明
+
+开始执行任务。"""
+
+        return prompt
+
+    async def develop_feature(
+        self,
+        issue_number: int,
+        issue_title: str,
+        issue_url: str,
+        issue_body: str,
+    ) -> dict[str, any]:
+        """
+        调用 Claude Code CLI 进行开发
+
+        Args:
+            issue_number: Issue 编号
+            issue_title: Issue 标题
+            issue_url: Issue URL
+            issue_body: Issue 内容
+
+        Returns:
+            dict: 执行结果
+                - success (bool): 是否成功
+                - output (str): 标准输出
+                - errors (str): 错误输出
+                - returncode (int): 返回码
+                - execution_time (float): 执行时间（秒）
+        """
+        import time
+
+        start_time = time.time()
+        prompt = self._build_prompt(issue_url, issue_title, issue_body, issue_number)
+
+        self.logger.info(f"开始 AI 开发任务: Issue #{issue_number} - {issue_title}")
+
+        # 尝试多次执行（重试机制）
+        last_error = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                self.logger.info(f"执行尝试 {attempt}/{self.max_retries}")
+
+                result = await self._execute_claude(prompt)
+
+                execution_time = time.time() - start_time
+
+                # 成功执行
+                if result["success"]:
+                    self.logger.info(
+                        f"✅ AI 开发任务完成: Issue #{issue_number} "
+                        f"(耗时: {execution_time:.1f}s)"
+                    )
+                    result["execution_time"] = execution_time
+                    return result
+                else:
+                    # 非成功，记录错误以便重试
+                    last_error = result.get("errors", "Unknown error")
+                    self.logger.warning(
+                        f"尝试 {attempt} 失败: {last_error[:200]}"
+                    )
+
+            except asyncio.TimeoutError:
+                last_error = f"执行超时（>{self.timeout}秒）"
+                self.logger.error(f"尝试 {attempt} 超时")
+            except Exception as e:
+                last_error = str(e)
+                self.logger.error(
+                    f"尝试 {attempt} 异常: {e}",
+                    exc_info=True,
+                )
+
+            # 如果不是最后一次尝试，等待一段时间后重试
+            if attempt < self.max_retries:
+                wait_time = min(2**attempt, 10)  # 指数退避，最多 10 秒
+                self.logger.info(f"等待 {wait_time}s 后重试...")
+                await asyncio.sleep(wait_time)
+
+        # 所有尝试都失败了
+        execution_time = time.time() - start_time
+        self.logger.error(
+            f"❌ AI 开发任务失败: Issue #{issue_number} "
+            f"(总耗时: {execution_time:.1f}s)"
+        )
+
+        return {
+            "success": False,
+            "output": "",
+            "errors": last_error or "执行失败",
+            "returncode": -1,
+            "execution_time": execution_time,
+        }
+
+    async def _execute_claude(self, prompt: str) -> dict[str, any]:
+        """
+        执行 Claude Code CLI
+
+        Args:
+            prompt: 发送给 Claude 的提示词
+
+        Returns:
+            dict: 执行结果
+
+        Raises:
+            asyncio.TimeoutError: 执行超时
+            Exception: 执行失败
+        """
+        try:
+            # 将 prompt 写入临时文件
+            import tempfile
+
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                suffix=".txt",
+                delete=False,
+            ) as f:
+                f.write(prompt)
+                prompt_file = f.name
+
+            self.logger.debug(f"Prompt 已写入临时文件: {prompt_file}")
+
+            # 构建命令
+            cmd = [
+                self.claude_cli_path,
+                "--cwd", str(self.repo_path),
+            ]
+
+            # 如果有 prompt 文件，添加到命令
+            # 注意：claude-code 可能需要特定的参数格式
+            # 这里假设它接受文件路径或从 stdin 读取
+
+            self.logger.debug(f"执行命令: {' '.join(cmd)}")
+
+            # 执行命令
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=str(self.repo_path),
+            )
+
+            # 写入 prompt 到 stdin
+            stdin_input = prompt.encode()
+
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(input=stdin_input),
+                    timeout=self.timeout,
+                )
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                raise
+
+            # 解码输出
+            output = stdout.decode("utf-8", errors="replace")
+            errors = stderr.decode("utf-8", errors="replace")
+
+            # 记录输出
+            if output:
+                self.logger.debug(f"Claude 输出:\n{output[:500]}")
+            if errors:
+                self.logger.warning(f"Claude 错误:\n{errors[:500]}")
+
+            return {
+                "success": process.returncode == 0,
+                "output": output,
+                "errors": errors,
+                "returncode": process.returncode,
+            }
+
+        except asyncio.TimeoutError:
+            self.logger.error(f"Claude CLI 执行超时（{self.timeout}秒）")
+            raise
+        except FileNotFoundError:
+            error_msg = (
+                f"Claude CLI 未找到: {self.claude_cli_path}. "
+                f"请使用 'npm install -g @anthropic/claude-code' 安装"
+            )
+            self.logger.error(error_msg)
+            raise Exception(error_msg)
+        except Exception as e:
+            self.logger.error(f"执行 Claude CLI 失败: {e}", exc_info=True)
+            raise
+
+    async def test_connection(self) -> bool:
+        """
+        测试 Claude CLI 是否可用
+
+        Returns:
+            bool: 是否可用
+        """
+        try:
+            # 尝试获取版本
+            process = await asyncio.create_subprocess_exec(
+                self.claude_cli_path,
+                "--version",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=5,
+            )
+
+            if process.returncode == 0:
+                version = stdout.decode().strip()
+                self.logger.info(f"Claude CLI 可用: {version}")
+                return True
+            else:
+                self.logger.error(f"Claude CLI 不可用: {stderr.decode()}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Claude CLI 连接测试失败: {e}")
+            return False

@@ -124,6 +124,10 @@ class SecurityConfig(BaseModel):
     basic_auth_username: Optional[str] = None
     basic_auth_password: Optional[str] = None
     ip_whitelist: list[str] = []
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ]  # 默认仅允许本地开发
 
 
 class PerformanceConfig(BaseModel):
