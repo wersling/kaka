@@ -1,0 +1,108 @@
+# AI 开发调度服务配置文件
+
+# 服务器配置
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: false
+  workers: 1
+
+# GitHub 配置
+github:
+  # Webhook 密钥（从环境变量读取）
+  webhook_secret: "${GITHUB_WEBHOOK_SECRET}"
+  # GitHub Token（从环境变量读取）
+  token: "${GITHUB_TOKEN}"
+  # 仓库信息
+  repo_owner: "${GITHUB_REPO_OWNER}"
+  repo_name: "${GITHUB_REPO_NAME}"
+  # 触发条件
+  trigger_label: "ai-dev"
+  trigger_command: "/ai develop"
+
+# 代码仓库配置
+repository:
+  # 本地仓库路径（从环境变量读取）
+  path: "${REPO_PATH}"
+  # 默认分支
+  default_branch: "main"
+  # 远程名称
+  remote_name: "origin"
+
+# Claude Code 配置
+claude:
+  # 执行超时时间（秒）
+  timeout: 1800  # 30 分钟
+  # 最大重试次数
+  max_retries: 2
+  # 是否自动运行测试
+  auto_test: true
+  # Claude Code CLI 路径（如果不在 PATH 中）
+  cli_path: "claude-code"
+  # 工作目录覆盖（可选）
+  cwd: null
+
+# 任务配置
+task:
+  # 分支命名模板
+  branch_template: "ai/feature-{issue_number}-{timestamp}"
+  # Commit message 模板
+  commit_template: "AI: {issue_title}"
+  # 并发任务数限制
+  max_concurrent: 1
+  # 任务队列大小
+  queue_size: 10
+
+# 日志配置
+logging:
+  # 日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  # 日志文件路径
+  file: "logs/ai-scheduler.log"
+  # 日志文件大小限制（MB）
+  max_bytes: 10485760  # 10 MB
+  # 保留的日志文件数量
+  backup_count: 5
+  # 日志格式
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  # 是否输出到控制台
+  console: true
+  # 是否使用结构化日志（JSON 格式）
+  json: false
+
+# 安全配置
+security:
+  # 是否启用基础认证（可选）
+  enable_basic_auth: false
+  # 基本认证用户名（从环境变量读取）
+  basic_auth_username: "${BASIC_AUTH_USERNAME:}"
+  # 基本认证密码（从环境变量读取）
+  basic_auth_password: "${BASIC_AUTH_PASSWORD:}"
+  # IP 白名单（可选，空列表表示不限制）
+  ip_whitelist: []
+
+# 性能配置
+performance:
+  # 是否启用缓存
+  enable_cache: true
+  # 缓存过期时间（秒）
+  cache_ttl: 3600
+  # 是否启用 Prometheus metrics
+  enable_metrics: true
+  # Metrics 端点路径
+  metrics_path: "/metrics"
+
+# 通知配置（可选）
+notifications:
+  # 是否启用通知
+  enabled: false
+  # Slack 配置
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL:}"
+    channel: "#ai-dev"
+  # Telegram 配置
+  telegram:
+    enabled: false
+    bot_token: "${TELEGRAM_BOT_TOKEN:}"
+    chat_id: "${TELEGRAM_CHAT_ID:}"
