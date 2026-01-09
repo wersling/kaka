@@ -235,11 +235,12 @@ Issue 内容:
         """
         process = None
         try:
-            # 构建命令 - 使用 -p 参数传递 prompt，避免流式模式限制
+            # 构建命令 - 使用 -p 参数传递 prompt
             cmd = [
                 self.claude_cli_path,
                 "-p",
                 prompt,
+                "--output-format", "json",  # 明确指定 JSON 输出格式，避免流式模式
             ]
 
             # 如果配置了跳过权限检查，添加参数
@@ -290,22 +291,60 @@ Issue 内容:
             output = stdout.decode("utf-8", errors="replace")
             errors = stderr.decode("utf-8", errors="replace")
 
-            # 注意：不再实时记录 Claude 输出到数据库，只记录系统级别日志
+            # 处理 JSON 格式输出
+            actual_output = output
+            actual_errors = errors
+            json_error = None
 
-            # 记录输出到日志（增加长度限制以便查看完整错误）
-            if output:
-                # 如果输出是 JSON 格式的错误，记录完整输出
-                if '"error"' in output or '"permission_denial"' in output or 'error_during_execution' in output:
-                    self.logger.error(f"Claude 输出（完整）:\n{output}")
-                else:
-                    self.logger.debug(f"Claude 输出:\n{output[:1000]}")
-            if errors:
-                self.logger.warning(f"Claude 错误:\n{errors[:1000]}")
+            if output.strip().startswith("{"):
+                try:
+                    import json
+                    output_json = json.loads(output)
+
+                    # 检查是否是错误响应
+                    if output_json.get("type") == "result" and output_json.get("subtype") == "error_during_execution":
+                        # 提取错误信息
+                        error_list = output_json.get("errors", [])
+                        if error_list:
+                            json_error = error_list[0] if isinstance(error_list, list) else str(error_list)
+                            self.logger.error(f"Claude CLI 返回错误: {json_error}")
+                            self.logger.error(f"完整错误输出: {output}")
+
+                            actual_errors = json_error
+                            actual_output = ""  # 错误情况下清空输出
+                    else:
+                        # 正常响应，提取实际数据
+                        # JSON 输出格式中，实际响应可能在不同的字段中
+                        # 尝试提取 data、result、content 等字段
+                        for key in ["data", "result", "content", "output"]:
+                            if key in output_json:
+                                data = output_json[key]
+                                if isinstance(data, str):
+                                    actual_output = data
+                                elif isinstance(data, dict):
+                                    # 可能是嵌套的结构
+                                    actual_output = json.dumps(data, ensure_ascii=False)
+                                break
+
+                        # 如果没有找到特定字段，直接使用整个 JSON
+                        if actual_output == output:
+                            # 移除顶层 JSON 包装，提取有用信息
+                            if "data" not in output_json and "result" not in output_json:
+                                actual_output = json.dumps(output_json, ensure_ascii=False, indent=2)
+
+                except json.JSONDecodeError as e:
+                    self.logger.warning(f"无法解析 JSON 输出: {e}，使用原始输出")
+
+            # 记录输出到日志
+            if actual_output:
+                self.logger.debug(f"Claude 输出（前500字符）:\n{actual_output[:500]}")
+            if actual_errors:
+                self.logger.warning(f"Claude 错误: {actual_errors}")
 
             return {
-                "success": process.returncode == 0,
-                "output": output,
-                "errors": errors,
+                "success": process.returncode == 0 and not json_error,
+                "output": actual_output,
+                "errors": actual_errors or str(json_error) if json_error else errors,
                 "returncode": process.returncode,
             }
 

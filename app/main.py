@@ -178,6 +178,15 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ 数据库初始化失败: {e}", exc_info=True)
         raise
 
+    # 初始化并发管理器
+    from app.utils.concurrency import ConcurrencyManager
+    try:
+        ConcurrencyManager.initialize(config.task.max_concurrent)
+        logger.info(f"✅ 并发管理器初始化完成 (最大并发: {config.task.max_concurrent})")
+    except Exception as e:
+        logger.error(f"❌ 并发管理器初始化失败: {e}", exc_info=True)
+        raise
+
     # 记录配置信息
     logger.info(f"📋 仓库: {config.github.repo_full_name}")
     logger.info(f"📂 本地路径: {config.repository.path}")

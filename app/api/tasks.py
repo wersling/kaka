@@ -102,6 +102,26 @@ async def get_task_stats(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/concurrency/stats", summary="获取并发状态")
+async def get_concurrency_stats() -> dict:
+    """
+    获取当前并发状态
+
+    返回:
+        - max_concurrent: 最大并发数
+        - current_running: 当前运行数
+        - available: 可用并发数
+    """
+    try:
+        from app.utils.concurrency import ConcurrencyManager
+
+        stats = ConcurrencyManager.get_stats()
+        return stats
+    except Exception as e:
+        logger.error(f"获取并发状态失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/tasks/{task_id}", summary="获取任务详情")
 async def get_task_detail(
     task_id: str,

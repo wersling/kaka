@@ -142,13 +142,19 @@ class WebhookHandler(LoggerMixin):
                 )
                 return None
 
-            # 触发 AI 开发
-            return await self._trigger_ai_development(
-                issue_number=issue.number,
-                issue_title=issue.title,
-                issue_url=issue.html_url,
-                issue_body=issue.body or "",
-            )
+            # 触发 AI 开发（带并发控制）
+            from app.utils.concurrency import ConcurrencyManager
+
+            async with ConcurrencyManager():
+                self.logger.info(
+                    f"🔓 获取并发锁，开始处理 Issue #{issue.number}"
+                )
+                return await self._trigger_ai_development(
+                    issue_number=issue.number,
+                    issue_title=issue.title,
+                    issue_url=issue.html_url,
+                    issue_body=issue.body or "",
+                )
 
         except Exception as e:
             self.logger.error(f"处理 Issue 事件失败: {e}", exc_info=True)
@@ -201,13 +207,19 @@ class WebhookHandler(LoggerMixin):
                 )
                 return None
 
-            # 触发 AI 开发
-            return await self._trigger_ai_development(
-                issue_number=issue.number,
-                issue_title=issue.title,
-                issue_url=issue.html_url,
-                issue_body=issue.body or "",
-            )
+            # 触发 AI 开发（带并发控制）
+            from app.utils.concurrency import ConcurrencyManager
+
+            async with ConcurrencyManager():
+                self.logger.info(
+                    f"🔓 获取并发锁，开始处理 Issue #{issue.number}"
+                )
+                return await self._trigger_ai_development(
+                    issue_number=issue.number,
+                    issue_title=issue.title,
+                    issue_url=issue.html_url,
+                    issue_body=issue.body or "",
+                )
 
         except Exception as e:
             self.logger.error(f"处理评论事件失败: {e}", exc_info=True)
