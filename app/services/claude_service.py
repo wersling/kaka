@@ -247,7 +247,9 @@ Issue 内容:
                 cmd.append("--dangerously-skip-permissions")
                 self.logger.debug("已启用 --dangerously-skip-permissions 模式")
 
-            self.logger.debug(f"执行命令: {self.claude_cli_path} -p <prompt> [参数]")
+            # 打印完整的命令（用于调试）
+            cmd_str = " ".join([f'"{arg}"' if " " in arg else arg for arg in cmd])
+            self.logger.info(f"🔧 执行 Claude CLI 命令: {cmd_str}")
 
             # 执行命令 - 不使用 stdin，避免流式模式
             process = await asyncio.create_subprocess_exec(
@@ -290,11 +292,15 @@ Issue 内容:
 
             # 注意：不再实时记录 Claude 输出到数据库，只记录系统级别日志
 
-            # 记录输出到日志
+            # 记录输出到日志（增加长度限制以便查看完整错误）
             if output:
-                self.logger.debug(f"Claude 输出:\n{output[:500]}")
+                # 如果输出是 JSON 格式的错误，记录完整输出
+                if '"error"' in output or '"permission_denial"' in output or 'error_during_execution' in output:
+                    self.logger.error(f"Claude 输出（完整）:\n{output}")
+                else:
+                    self.logger.debug(f"Claude 输出:\n{output[:1000]}")
             if errors:
-                self.logger.warning(f"Claude 错误:\n{errors[:500]}")
+                self.logger.warning(f"Claude 错误:\n{errors[:1000]}")
 
             return {
                 "success": process.returncode == 0,

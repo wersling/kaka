@@ -291,7 +291,7 @@ perf-memory:
 # GitHub 仓库配置
 GITHUB_OWNER ?= wersling
 GITHUB_REPO ?= kaka_test
-ISSUE_NUMBER ?= 19
+ISSUE_NUMBER ?= 10
 TEST_LABEL ?= ai-dev
 
 # 触发 Webhook（通过重新添加标签）
