@@ -64,6 +64,8 @@ class GitHubService(LoggerMixin):
         issue_title: str,
         issue_body: str,
         base_branch: Optional[str] = None,
+        execution_time: float = 0,
+        development_summary: str = "",
     ) -> dict[str, any]:
         """
         创建 Pull Request
@@ -74,6 +76,8 @@ class GitHubService(LoggerMixin):
             issue_title: Issue 标题
             issue_body: Issue 内容
             base_branch: 目标分支，默认为仓库默认分支
+            execution_time: 执行时间（秒）
+            development_summary: AI 开发总结
 
         Returns:
             dict: PR 信息
@@ -96,8 +100,10 @@ class GitHubService(LoggerMixin):
             )
 
             # 构建 PR 标题和描述
-            pr_title = f"🤖 AI: {issue_title}"
-            pr_body = self._build_pr_body(issue_number, issue_body)
+            pr_title = f"Kaka: {issue_title}"
+            pr_body = self._build_pr_body(
+                issue_number, issue_title, issue_body, execution_time, development_summary
+            )
 
             # 创建 PR
             pr = repo.create_pull(
@@ -121,13 +127,23 @@ class GitHubService(LoggerMixin):
             self.logger.error(f"创建 PR 失败: {e}", exc_info=True)
             raise
 
-    def _build_pr_body(self, issue_number: int, issue_body: str) -> str:
+    def _build_pr_body(
+        self,
+        issue_number: int,
+        issue_title: str,
+        issue_body: str,
+        execution_time: float = 0,
+        development_summary: str = "",
+    ) -> str:
         """
         构建 PR 描述
 
         Args:
             issue_number: Issue 编号
+            issue_title: Issue 标题
             issue_body: Issue 内容
+            execution_time: 执行时间（秒）
+            development_summary: AI 开发总结
 
         Returns:
             str: PR 描述
@@ -135,45 +151,50 @@ class GitHubService(LoggerMixin):
         from app.config import get_config
 
         config = get_config()
-
         repo_owner = config.github.repo_owner
-        repo_name = config.github.repo_name
 
-        return f"""## 🤖 AI 自动生成的 Pull Request
+        # 格式化执行时间
+        time_str = f"{execution_time:.1f}秒" if execution_time > 0 else "未知"
 
-**关联 Issue**: #{issue_number}
+        # 构建 PR 描述
+        pr_body = f"""
+**关联 Issue**: #{issue_number} | **用时**: {time_str}
 
-### 变更说明
-本 PR 由 AI 自动分析和生成，已完成以下工作：
-- ✅ 需求分析
-- ✅ 代码实现
-- ✅ 测试验证
-- ✅ 代码提交
+---
 
-### 原 Issue 内容
+## 原 Issue：{issue_title}
+
 ```
 {issue_body or "无详细描述"}
 ```
 
-### 审核要点
-请人工审核以下内容：
-- 📋 代码质量和安全性
-- ✅ 功能完整性
-- 🧪 测试覆盖率
-- 📝 文档是否完善
-- 🎯 是否符合项目规范
+"""
 
-### 如何测试
-1. Checkout 此分支
-2. 运行测试（如果有）
-3. 手动测试相关功能
-4. 检查代码变更
+        # 如果有 AI 开发总结，添加到 PR 描述中
+        if development_summary:
+            pr_body += f"""---
 
-@{repo_owner} 请 review 后合并
+## Kaka 开发总结
+
+{development_summary}
 
 ---
-*由 AI 开发调度服务自动生成*
+
+@{repo_owner} 请 review 后决策是否 PR，谢谢！
 """
+
+        return pr_body
+
+    def _get_current_timestamp(self) -> str:
+        """
+        获取当前时间戳字符串
+
+        Returns:
+            str: 格式化的时间戳
+        """
+        from datetime import datetime
+
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def add_comment_to_issue(
         self,

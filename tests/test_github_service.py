@@ -330,10 +330,8 @@ class TestCreatePullRequest:
 
         验证：
         - 包含 Issue 链接
-        - 包含变更说明
         - 包含原 Issue 内容
-        - 包含审核要点
-        - 包含测试指南
+        - 包含基本元信息
         """
         github_service._github_mock.get_repo.return_value = mock_repo
         mock_repo.create_pull.return_value = mock_pull_request
@@ -351,11 +349,8 @@ class TestCreatePullRequest:
         # 验证必需内容
         assert "## 🤖 AI 自动生成的 Pull Request" in pr_body
         assert "**关联 Issue**: #123" in pr_body
-        assert "### 变更说明" in pr_body
-        assert "### 原 Issue 内容" in pr_body
+        assert "## 📋 原 Issue 内容" in pr_body
         assert "Original issue description" in pr_body
-        assert "### 审核要点" in pr_body
-        assert "### 如何测试" in pr_body
 
     def test_create_pr_includes_issue_link(
         self, github_service, mock_repo, mock_pull_request
@@ -469,7 +464,7 @@ class TestBuildPrBody:
         - 格式正确
         """
         body = github_service._build_pr_body(
-            issue_number=123, issue_body="Test content"
+            issue_number=123, issue_title="Test Issue", issue_body="Test content"
         )
 
         assert "**关联 Issue**: #123" in body
@@ -483,61 +478,56 @@ class TestBuildPrBody:
         - 在代码块中
         """
         body = github_service._build_pr_body(
-            issue_number=123, issue_body="Original issue description here"
+            issue_number=123,
+            issue_title="Test Issue",
+            issue_body="Original issue description here",
         )
 
         assert "Original issue description here" in body
-        assert "### 原 Issue 内容" in body
+        assert "## 📋 原 Issue 内容" in body
 
-    def test_pr_body_includes_review_points(self, github_service):
+    def test_pr_body_with_development_summary(self, github_service):
         """
-        测试包含审核要点
+        测试包含 AI 开发总结
 
         验证：
-        - 包含审核清单
-        - 包含所有必要的审核项
-        """
-        body = github_service._build_pr_body(
-            issue_number=123, issue_body="Test"
-        )
-
-        assert "### 审核要点" in body
-        assert "📋 代码质量和安全性" in body
-        assert "✅ 功能完整性" in body
-        assert "🧪 测试覆盖率" in body
-        assert "📝 文档是否完善" in body
-        assert "🎯 是否符合项目规范" in body
-
-    def test_pr_body_includes_how_to_test(self, github_service):
-        """
-        测试包含如何测试部分
-
-        验证：
-        - 包含测试指南
-        - 包含步骤说明
-        """
-        body = github_service._build_pr_body(
-            issue_number=123, issue_body="Test"
-        )
-
-        assert "### 如何测试" in body
-        assert "1. Checkout 此分支" in body
-        assert "2. 运行测试（如果有）" in body
-        assert "3. 手动测试相关功能" in body
-        assert "4. 检查代码变更" in body
-
-    def test_pr_body_includes_mention(self, github_service):
-        """
-        测试包含 @mention
-
-        验证：
-        - @repo_owner 被包含
+        - AI 总结被包含
         - 格式正确
         """
+        summary = """## 执行概述
+完成了用户认证功能的实现
+
+## 变更文件
+- 新增: app/auth/login.py
+- 修改: app/models/user.py
+
+## 技术方案
+使用 JWT 进行身份验证"""
+
         body = github_service._build_pr_body(
-            issue_number=123, issue_body="Test"
+            issue_number=123,
+            issue_title="Test Issue",
+            issue_body="Test",
+            development_summary=summary,
         )
 
+        assert "## 🤖 AI 开发总结" in body
+        assert summary in body
+        assert "## 执行概述" in body
+
+    def test_pr_body_without_development_summary(self, github_service):
+        """
+        测试没有 AI 开发总结的情况
+
+        验证：
+        - 显示警告信息
+        - 不崩溃
+        """
+        body = github_service._build_pr_body(
+            issue_number=123, issue_title="Test Issue", issue_body="Test"
+        )
+
+        assert "AI 开发总结未生成" in body
         assert "@testowner" in body
         assert "请 review 后合并" in body
 
@@ -549,7 +539,9 @@ class TestBuildPrBody:
         - 空 body 时显示默认文本
         - 不崩溃
         """
-        body = github_service._build_pr_body(issue_number=123, issue_body="")
+        body = github_service._build_pr_body(
+            issue_number=123, issue_title="Test Issue", issue_body=""
+        )
 
         assert "无详细描述" in body
 
@@ -561,7 +553,9 @@ class TestBuildPrBody:
         - None body 时显示默认文本
         - 不崩溃
         """
-        body = github_service._build_pr_body(issue_number=123, issue_body=None)
+        body = github_service._build_pr_body(
+            issue_number=123, issue_title="Test Issue", issue_body=None
+        )
 
         assert "无详细描述" in body
 

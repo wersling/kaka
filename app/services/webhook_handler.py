@@ -305,11 +305,19 @@ class WebhookHandler(LoggerMixin):
 
             # 5. 创建 PR
             self.logger.info(f"步骤 5/5: 创建 Pull Request")
+            execution_time = claude_result.get("execution_time", 0)
+            development_summary = claude_result.get("development_summary", "")
+
+            if not development_summary:
+                self.logger.warning("未找到 AI 开发总结，PR 描述将不包含详细信息")
+
             pr_info = self.github_service.create_pull_request(
                 branch_name=branch_name,
                 issue_number=issue_number,
                 issue_title=issue_title,
                 issue_body=issue_body,
+                execution_time=execution_time,
+                development_summary=development_summary,
             )
 
             self.logger.info(
@@ -317,10 +325,10 @@ class WebhookHandler(LoggerMixin):
             )
 
             # 在 Issue 中评论 PR 链接（非阻塞）
+            execution_time = claude_result.get("execution_time", 0)
             success = self.github_service.add_comment_to_issue(
                 issue_number=issue_number,
-                comment=f"✅ AI 开发完成！已创建 PR: #{pr_info['pr_number']}\n\n"
-                f"PR URL: {pr_info['html_url']}",
+                comment=f"✅ AI 开发完成！已创建 PR: #{pr_info['pr_number']}，用时：{execution_time:.1f}秒",
             )
             if not success:
                 self.logger.warning(
