@@ -277,6 +277,24 @@ claude-code --version
 
 #### 4. 配置环境变量
 
+##### 方式一：使用交互式配置向导（推荐）
+
+```bash
+python scripts/setup_env.py
+```
+
+交互式向导会引导您完成：
+- ✅ GitHub Token 验证
+- ✅ GitHub 仓库信息配置
+- ✅ Webhook Secret 自动生成
+- ✅ 本地仓库路径验证
+- ✅ Anthropic API Key 验证
+- ✅ ngrok 配置（可选）
+
+详细说明：[scripts/SETUP_ENV.md](scripts/SETUP_ENV.md)
+
+##### 方式二：手动配置
+
 编辑项目根目录下的 `.env` 文件：
 
 ```bash

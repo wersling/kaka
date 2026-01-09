@@ -1,0 +1,202 @@
+"""
+测试 setup_env.py 配置脚本的功能
+
+注意：这些测试主要测试验证逻辑，不进行实际的交互式输入
+"""
+
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+# 导入验证函数
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+from setup_env import (
+    validate_github_token,
+    validate_repo_path,
+    validate_anthropic_api_key,
+    generate_webhook_secret,
+)
+
+
+class TestValidateGithubToken:
+    """测试 GitHub Token 验证"""
+
+    def test_valid_classic_token(self):
+        """测试有效的 Classic Token"""
+        token = "ghp_" + "a" * 32
+        assert validate_github_token(token) is True
+
+    def test_valid_fine_grained_token(self):
+        """测试有效的 Fine-grained Token"""
+        token = "github_pat_" + "a" * 62
+        assert validate_github_token(token) is True
+
+    def test_invalid_token_no_prefix(self):
+        """测试无效的 Token（没有前缀）"""
+        token = "a" * 40
+        assert validate_github_token(token) is False
+
+    def test_invalid_classic_token_too_short(self):
+        """测试无效的 Classic Token（太短）"""
+        token = "ghp_" + "a" * 10
+        assert validate_github_token(token) is False
+
+    def test_invalid_fine_grained_token_too_short(self):
+        """测试无效的 Fine-grained Token（太短）"""
+        token = "github_pat_" + "a" * 30
+        assert validate_github_token(token) is False
+
+
+class TestValidateRepoPath:
+    """测试仓库路径验证"""
+
+    def test_non_existent_path(self):
+        """测试不存在的路径"""
+        is_valid, error_msg = validate_repo_path("/nonexistent/path/that/does/not/exist")
+        assert is_valid is False
+        assert "不存在" in error_msg
+
+    def test_not_a_git_repo(self, tmp_path):
+        """测试不是 Git 仓库的目录"""
+        is_valid, error_msg = validate_repo_path(str(tmp_path))
+        assert is_valid is False
+        assert "不是有效的 Git 仓库" in error_msg
+
+    def test_valid_git_repo(self, tmp_path):
+        """测试有效的 Git 仓库"""
+        # 创建一个 .git 目录来模拟 Git 仓库
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+
+        is_valid, error_msg = validate_repo_path(str(tmp_path))
+        assert is_valid is True
+        assert error_msg == ""
+
+
+class TestValidateAnthropicApiKey:
+    """测试 Anthropic API Key 验证"""
+
+    def test_valid_api_key(self):
+        """测试有效的 API Key"""
+        api_key = "sk-ant-" + "a" * 80
+        assert validate_anthropic_api_key(api_key) is True
+
+    def test_invalid_api_key_no_prefix(self):
+        """测试无效的 API Key（没有前缀）"""
+        api_key = "a" * 86
+        assert validate_anthropic_api_key(api_key) is False
+
+    def test_invalid_api_key_too_short(self):
+        """测试无效的 API Key（太短）"""
+        api_key = "sk-ant-" + "a" * 50
+        assert validate_anthropic_api_key(api_key) is False
+
+
+class TestGenerateWebhookSecret:
+    """测试 Webhook Secret 生成"""
+
+    def test_generate_secret_length(self):
+        """测试生成的密钥长度"""
+        secret = generate_webhook_secret()
+        # secrets.token_hex(32) 生成 64 个字符
+        assert len(secret) == 64
+
+    def test_generate_secret_is_hex(self):
+        """测试生成的密钥是十六进制"""
+        secret = generate_webhook_secret()
+        try:
+            int(secret, 16)
+        except ValueError:
+            pytest.fail("生成的密钥不是有效的十六进制字符串")
+
+    def test_generate_secrets_are_unique(self):
+        """测试每次生成的密钥都不同"""
+        secret1 = generate_webhook_secret()
+        secret2 = generate_webhook_secret()
+        assert secret1 != secret2
+
+
+class TestWriteEnvFile:
+    """测试 .env 文件写入"""
+
+    def test_write_new_env_file(self, tmp_path):
+        """测试写入新的 .env 文件"""
+        from setup_env import write_env_file
+
+        config = {
+            'GITHUB_WEBHOOK_SECRET': 'test_secret_123',
+            'GITHUB_TOKEN': 'ghp_test_token',
+            'GITHUB_REPO_OWNER': 'testuser',
+            'GITHUB_REPO_NAME': 'testrepo',
+            'REPO_PATH': '/path/to/repo',
+            'ANTHROPIC_API_KEY': 'sk-ant-test-key',
+        }
+
+        env_file = tmp_path / '.env'
+        write_env_file(config, env_file)
+
+        assert env_file.exists()
+
+        content = env_file.read_text()
+        assert 'GITHUB_WEBHOOK_SECRET=test_secret_123' in content
+        assert 'GITHUB_TOKEN=ghp_test_token' in content
+        assert 'GITHUB_REPO_OWNER=testuser' in content
+        assert 'GITHUB_REPO_NAME=testrepo' in content
+        assert 'REPO_PATH=/path/to/repo' in content
+        assert 'ANTHROPIC_API_KEY=sk-ant-test-key' in content
+
+    def test_write_env_file_with_ngrok(self, tmp_path):
+        """测试写入包含 ngrok 配置的 .env 文件"""
+        from setup_env import write_env_file
+
+        config = {
+            'GITHUB_WEBHOOK_SECRET': 'test_secret_123',
+            'GITHUB_TOKEN': 'ghp_test_token',
+            'GITHUB_REPO_OWNER': 'testuser',
+            'GITHUB_REPO_NAME': 'testrepo',
+            'REPO_PATH': '/path/to/repo',
+            'ANTHROPIC_API_KEY': 'sk-ant-test-key',
+            'NGROK_AUTH_TOKEN': 'ngrok_token',
+            'NGROK_DOMAIN': 'mydomain.ngrok.io',
+        }
+
+        env_file = tmp_path / '.env'
+        write_env_file(config, env_file)
+
+        content = env_file.read_text()
+        assert 'NGROK_AUTH_TOKEN=ngrok_token' in content
+        assert 'NGROK_DOMAIN=mydomain.ngrok.io' in content
+
+    def test_overwrite_existing_env_file(self, tmp_path):
+        """测试覆盖现有 .env 文件"""
+        from setup_env import write_env_file
+
+        # 创建现有的 .env 文件
+        env_file = tmp_path / '.env'
+        env_file.write_text("OLD_CONTENT")
+
+        config = {
+            'GITHUB_WEBHOOK_SECRET': 'new_secret',
+            'GITHUB_TOKEN': 'ghp_new_token',
+            'GITHUB_REPO_OWNER': 'newuser',
+            'GITHUB_REPO_NAME': 'newrepo',
+            'REPO_PATH': '/new/path',
+            'ANTHROPIC_API_KEY': 'sk-ant-new-key',
+        }
+
+        # Mock input 模拟用户确认覆盖
+        with patch('builtins.input', return_value='y'):
+            write_env_file(config, env_file)
+
+        # 验证备份文件已创建
+        backup_file = tmp_path / '.env.backup'
+        assert backup_file.exists()
+        assert backup_file.read_text() == "OLD_CONTENT"
+
+        # 验证新内容已写入
+        new_content = env_file.read_text()
+        assert 'GITHUB_WEBHOOK_SECRET=new_secret' in new_content
+        assert 'OLD_CONTENT' not in new_content

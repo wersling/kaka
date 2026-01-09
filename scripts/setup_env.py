@@ -1,0 +1,595 @@
+#!/usr/bin/env python3
+"""
+交互式环境配置脚本
+
+用于创建和配置 .env 文件，支持：
+- GitHub 配置（Token、仓库信息、Webhook Secret）
+- 本地代码仓库路径
+- Anthropic API Key
+- ngrok 配置（可选，用于 GitHub Webhook）
+
+使用方法：
+    python scripts/setup_env.py
+"""
+
+import os
+import secrets
+import sys
+from pathlib import Path
+from typing import Optional
+
+
+class Colors:
+    """终端颜色常量"""
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+def print_header(text: str) -> None:
+    """打印标题"""
+    print(f"\n{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}{text:^70}{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
+
+
+def print_success(text: str) -> None:
+    """打印成功消息"""
+    print(f"{Colors.OKGREEN}✓ {text}{Colors.ENDC}")
+
+
+def print_error(text: str) -> None:
+    """打印错误消息"""
+    print(f"{Colors.FAIL}✗ {text}{Colors.ENDC}")
+
+
+def print_warning(text: str) -> None:
+    """打印警告消息"""
+    print(f"{Colors.WARNING}⚠ {text}{Colors.ENDC}")
+
+
+def print_info(text: str) -> None:
+    """打印信息消息"""
+    print(f"{Colors.OKCYAN}ℹ {text}{Colors.ENDC}")
+
+
+def input_required(prompt: str, default: Optional[str] = None) -> str:
+    """
+    必填输入，带验证
+
+    Args:
+        prompt: 提示文本
+        default: 默认值
+
+    Returns:
+        用户输入的值
+    """
+    while True:
+        if default:
+            user_input = input(f"{prompt} [{default}]: ").strip() or default
+        else:
+            user_input = input(f"{prompt}: ").strip()
+
+        if user_input:
+            return user_input
+
+        print_error("此项为必填，请输入有效值。")
+
+
+def input_yes_no(prompt: str, default: bool = False) -> bool:
+    """
+    是/否选择
+
+    Args:
+        prompt: 提示文本
+        default: 默认值
+
+    Returns:
+        用户选择（True/False）
+    """
+    default_str = "Y/n" if default else "y/N"
+    while True:
+        user_input = input(f"{prompt} [{default_str}]: ").strip().lower()
+
+        if not user_input:
+            return default
+
+        if user_input in ['y', 'yes', '是', 'Y']:
+            return True
+        elif user_input in ['n', 'no', '否', 'N']:
+            return False
+
+        print_error("请输入 y/yes 或 n/no")
+
+
+def generate_webhook_secret() -> str:
+    """生成安全的 Webhook Secret"""
+    return secrets.token_hex(32)
+
+
+def validate_github_token(token: str) -> bool:
+    """
+    验证 GitHub Token 格式
+
+    Args:
+        token: GitHub Token
+
+    Returns:
+        是否有效
+    """
+    # Classic token 格式：ghp_ 后跟至少 32 个字符
+    if token.startswith('ghp_') and len(token) >= 36:
+        return True
+
+    # Fine-grained token 格式：github_pat_ 后跟至少 62 个字符
+    if token.startswith('github_pat_') and len(token) >= 73:
+        return True
+
+    return False
+
+
+def validate_repo_path(path: str) -> tuple[bool, str]:
+    """
+    验证仓库路径
+
+    Args:
+        path: 仓库路径
+
+    Returns:
+        (是否有效, 错误消息)
+    """
+    path_obj = Path(path).expanduser().resolve()
+
+    if not path_obj.exists():
+        return False, f"路径不存在: {path_obj}"
+
+    if not (path_obj / ".git").exists():
+        return False, f"不是有效的 Git 仓库（缺少 .git 目录）: {path_obj}"
+
+    return True, ""
+
+
+def validate_anthropic_api_key(api_key: str) -> bool:
+    """
+    验证 Anthropic API Key 格式
+
+    Args:
+        api_key: API Key
+
+    Returns:
+        是否有效
+    """
+    # Anthropic API Key 格式：sk-ant- 后跟至少 80 个字符
+    if api_key.startswith('sk-ant-') and len(api_key) >= 86:
+        return True
+
+    return False
+
+
+def setup_github_config() -> dict:
+    """
+    配置 GitHub 相关设置
+
+    Returns:
+        GitHub 配置字典
+    """
+    print_header("GitHub 配置")
+
+    config = {}
+
+    # GitHub Token
+    print_info("GitHub Personal Access Token (PAT)")
+    print("  获取方式：")
+    print("    1. 访问 https://github.com")
+    print("    2. 点击头像 → Settings → Developer settings")
+    print("    3. Personal access tokens → Fine-grained tokens")
+    print("    4. 生成新 token，需要以下权限：")
+    print("       ✓ Contents (Read and write)")
+    print("       ✓ Pull requests (Read and write)")
+    print("       ✓ Issues (Read and write)")
+    print()
+
+    while True:
+        token = input_required("请输入 GitHub Token (以 ghp_ 或 github_pat_ 开头)")
+
+        if validate_github_token(token):
+            config['GITHUB_TOKEN'] = token
+            print_success("GitHub Token 格式验证通过")
+            break
+        else:
+            print_error("GitHub Token 格式无效")
+            print_info("Classic token 格式: ghp_XXXXXXXXXXXXXXXX (至少 36 字符)")
+            print_info("Fine-grained token 格式: github_pat_XXXXXXXXXXXXXXXX (至少 73 字符)")
+
+    print()
+
+    # 仓库信息
+    print_info("GitHub 仓库信息")
+    print("  示例：https://github.com/octocat/Hello-World")
+    print()
+
+    # 提供两种输入方式
+    use_url = input_yes_no("是否通过 GitHub URL 配置？", default=True)
+
+    if use_url:
+        # 通过 URL 解析
+        while True:
+            url = input_required("请输入 GitHub 仓库 URL (例如: https://github.com/octocat/Hello-World)").strip()
+
+            # 移除末尾的 .git
+            if url.endswith('.git'):
+                url = url[:-4]
+
+            # 解析 URL
+            # 支持 https://github.com/owner/repo 和 github.com/owner/repo 格式
+            import re
+            pattern = r'(?:https?://)?github\.com/([^/]+)/([^/]+)/?'
+            match = re.match(pattern, url)
+
+            if match:
+                config['GITHUB_REPO_OWNER'] = match.group(1)
+                config['GITHUB_REPO_NAME'] = match.group(2)
+                print_success(f"解析成功: {config['GITHUB_REPO_OWNER']} / {config['GITHUB_REPO_NAME']}")
+                break
+            else:
+                print_error("无法解析 GitHub URL，请检查格式是否正确")
+                print_info("正确格式示例: https://github.com/octocat/Hello-World")
+
+                retry = input_yes_no("是否重新输入？", default=True)
+                if not retry:
+                    # 切换到手动输入
+                    print_info("切换到手动输入模式")
+                    break
+    else:
+        # 手动输入
+        print_info("手动输入仓库信息")
+        print()
+
+    # 如果通过 URL 解析失败或用户选择手动输入
+    if 'GITHUB_REPO_OWNER' not in config:
+        config['GITHUB_REPO_OWNER'] = input_required("请输入仓库所有者用户名 (GITHUB_REPO_OWNER)")
+        config['GITHUB_REPO_NAME'] = input_required("请输入仓库名称 (GITHUB_REPO_NAME)")
+
+    print()
+
+    # Webhook Secret
+    print_info("GitHub Webhook Secret")
+    print("  用于验证 GitHub Webhook 请求的来源")
+    print("  建议使用自动生成的强随机密钥")
+    print()
+
+    use_auto_secret = input_yes_no("是否自动生成 Webhook Secret？", default=True)
+
+    if use_auto_secret:
+        config['GITHUB_WEBHOOK_SECRET'] = generate_webhook_secret()
+        print_success(f"已自动生成 Webhook Secret: {config['GITHUB_WEBHOOK_SECRET'][:16]}...")
+    else:
+        while True:
+            secret = input_required("请输入 Webhook Secret (至少 64 个字符)")
+            if len(secret) >= 64:
+                config['GITHUB_WEBHOOK_SECRET'] = secret
+                print_success("Webhook Secret 已设置")
+                break
+            else:
+                print_error("Webhook Secret 长度不足，至少需要 64 个字符")
+
+    print()
+
+    return config
+
+
+def setup_repo_path() -> dict:
+    """
+    配置本地代码仓库路径
+
+    Returns:
+        仓库路径配置字典
+    """
+    print_header("本地代码仓库配置")
+
+    config = {}
+
+    print_info("本地 Git 仓库路径")
+    print("  需要本地有对应的 Git 仓库，Claude Code 将在此路径进行开发")
+    print("  路径必须是绝对路径")
+    print()
+
+    while True:
+        path = input_required("请输入本地仓库路径 (REPO_PATH)")
+        is_valid, error_msg = validate_repo_path(path)
+
+        if is_valid:
+            config['REPO_PATH'] = str(Path(path).expanduser().resolve())
+            print_success(f"仓库路径验证通过: {config['REPO_PATH']}")
+            break
+        else:
+            print_error(error_msg)
+            retry = input_yes_no("是否重新输入？", default=True)
+            if not retry:
+                print_warning("跳过仓库路径配置（您需要稍后手动配置）")
+                break
+
+    print()
+
+    return config
+
+
+def setup_anthropic_api_key() -> dict:
+    """
+    配置 Anthropic API Key
+
+    Returns:
+        API Key 配置字典
+    """
+    print_header("Anthropic API Key 配置（可选）")
+
+    config = {}
+
+    print_info("Anthropic API Key (Claude Code 需要)")
+    print("  获取方式：")
+    print("    1. 访问 https://console.anthropic.com/")
+    print("    2. 登录后进入 API Keys 页面")
+    print("    3. 创建新的 API Key")
+    print("    4. 设置使用限额（强烈推荐）")
+    print()
+
+    # 询问是否配置
+    configure_api_key = input_yes_no("是否配置 Anthropic API Key？", default=True)
+
+    if not configure_api_key:
+        print_warning("跳过 Anthropic API Key 配置")
+        print_info("您需要稍后在 .env 文件中手动添加 ANTHROPIC_API_KEY")
+        print()
+        return config
+
+    while True:
+        api_key = input_required("请输入 Anthropic API Key (以 sk-ant- 开头)")
+
+        if validate_anthropic_api_key(api_key):
+            config['ANTHROPIC_API_KEY'] = api_key
+            print_success("Anthropic API Key 格式验证通过")
+            break
+        else:
+            print_error("Anthropic API Key 格式无效")
+            print_info("API Key 格式: sk-ant-XXXXXXXXXXXXXXXX (至少 86 字符)")
+
+    print()
+
+    return config
+
+
+def setup_ngrok() -> dict:
+    """
+    配置 ngrok（可选）
+
+    Returns:
+        ngrok 配置字典
+    """
+    print_header("ngrok 配置（可选）")
+
+    config = {}
+
+    print_info("ngrok 简介")
+    print("  ngrok 可以将本地服务暴露到公网，用于接收 GitHub Webhook")
+    print("  如果您不使用 ngrok，需要手动配置 GitHub Webhook URL")
+    print()
+
+    use_ngrok = input_yes_no("是否需要配置 ngrok？", default=False)
+
+    if not use_ngrok:
+        print_info("跳过 ngrok 配置")
+        print()
+        return config
+
+    # ngrok auth token
+    print_info("ngrok Authtoken")
+    print("  获取方式：")
+    print("    1. 访问 https://dashboard.ngrok.com/get-started/your-authtoken")
+    print("    2. 登录后复制 authtoken")
+    print()
+
+    config['NGROK_AUTH_TOKEN'] = input_required("请输入 ngrok authtoken")
+
+    # ngrok domain (可选)
+    print_info("ngrok 固定域名（可选）")
+    print("  如果有付费的 ngrok 固定域名，可以在此配置")
+    print("  免费版本每次启动域名会变化，可以留空")
+    print()
+
+    domain = input("请输入 ngrok 固定域名（可选，直接回车跳过）: ").strip()
+    if domain:
+        config['NGROK_DOMAIN'] = domain
+
+    print()
+    print_success("ngrok 配置完成")
+
+    return config
+
+
+def write_env_file(config: dict, env_file: Path) -> None:
+    """
+    写入 .env 文件
+
+    Args:
+        config: 配置字典
+        env_file: .env 文件路径
+    """
+    print_header("生成 .env 文件")
+
+    # 确保文件存在
+    if env_file.exists():
+        print_warning(f".env 文件已存在: {env_file}")
+        overwrite = input_yes_no("是否覆盖？", default=False)
+        if not overwrite:
+            print_info("已取消写入")
+            return
+
+        # 备份现有文件
+        backup_file = env_file.with_suffix('.backup')
+        import shutil
+        shutil.copy(env_file, backup_file)
+        print_success(f"已备份现有配置到: {backup_file}")
+
+    # 写入配置
+    with open(env_file, 'w', encoding='utf-8') as f:
+        f.write("# ============================================================================\n")
+        f.write("# AI 开发调度服务 - 环境变量配置\n")
+        f.write("# ============================================================================\n")
+        f.write("#\n")
+        f.write("# 此文件由 scripts/setup_env.py 自动生成\n")
+        f.write("# 生成时间: " + __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "\n")
+        f.write("#\n")
+        f.write("# ⚠️  重要提醒：\n")
+        f.write("#   - 永远不要将 .env 文件提交到 Git 仓库\n")
+        f.write("#   - 确保 .env 已添加到 .gitignore\n")
+        f.write("#   - 定期轮换 API 密钥和 Token\n")
+        f.write("#\n")
+        f.write("# ============================================================================\n\n")
+
+        # GitHub 配置
+        f.write("# ----------------------------------------------------------------------------\n")
+        f.write("# GitHub 配置\n")
+        f.write("# ----------------------------------------------------------------------------\n\n")
+        f.write(f"GITHUB_WEBHOOK_SECRET={config.get('GITHUB_WEBHOOK_SECRET', '')}\n")
+        f.write(f"GITHUB_TOKEN={config.get('GITHUB_TOKEN', '')}\n")
+        f.write(f"GITHUB_REPO_OWNER={config.get('GITHUB_REPO_OWNER', '')}\n")
+        f.write(f"GITHUB_REPO_NAME={config.get('GITHUB_REPO_NAME', '')}\n\n")
+
+        # 仓库路径
+        f.write("# ----------------------------------------------------------------------------\n")
+        f.write("# 本地代码仓库路径\n")
+        f.write("# ----------------------------------------------------------------------------\n\n")
+        f.write(f"REPO_PATH={config.get('REPO_PATH', '')}\n\n")
+
+        # Anthropic API Key
+        f.write("# ----------------------------------------------------------------------------\n")
+        f.write("# Anthropic API Key\n")
+        f.write("# ----------------------------------------------------------------------------\n\n")
+        f.write(f"ANTHROPIC_API_KEY={config.get('ANTHROPIC_API_KEY', '')}\n\n")
+
+        # ngrok 配置（如果有）
+        if 'NGROK_AUTH_TOKEN' in config:
+            f.write("# ----------------------------------------------------------------------------\n")
+            f.write("# ngrok 配置\n")
+            f.write("# ----------------------------------------------------------------------------\n\n")
+            f.write(f"NGROK_AUTH_TOKEN={config.get('NGROK_AUTH_TOKEN', '')}\n")
+            if 'NGROK_DOMAIN' in config:
+                f.write(f"NGROK_DOMAIN={config.get('NGROK_DOMAIN', '')}\n")
+            f.write("\n")
+
+    print_success(f".env 文件已生成: {env_file}")
+    print_warning(f"请确保文件权限正确: chmod 600 {env_file}")
+
+
+def print_next_steps(config: dict) -> None:
+    """打印后续步骤"""
+    print_header("配置完成")
+
+    print_success("环境配置已成功创建！")
+    print()
+
+    print("后续步骤：")
+    print()
+
+    print("1. 验证配置")
+    print("   $ python -c \"from app.config import load_config; print(load_config())\"")
+    print()
+
+    print("2. 启动服务")
+    print("   $ ./scripts/dev.sh")
+    print()
+
+    # 如果配置了 ngrok
+    if 'NGROK_AUTH_TOKEN' in config:
+        print("3. 启动 ngrok（新终端）")
+        print("   $ ngrok http 8000")
+        print()
+        print("4. 配置 GitHub Webhook")
+        print("   URL: https://<your-ngrok-domain>/webhook/github")
+        print(f"   Secret: {config.get('GITHUB_WEBHOOK_SECRET', '')[:16]}...")
+        print()
+    else:
+        print("3. 配置 GitHub Webhook")
+        print("   URL: http://your-server:8000/webhook/github")
+        print(f"   Secret: {config.get('GITHUB_WEBHOOK_SECRET', '')[:16]}...")
+        print()
+
+    repo_full = f"{config.get('GITHUB_REPO_OWNER', '')}/{config.get('GITHUB_REPO_NAME', '')}"
+    print(f"5. 在 GitHub 仓库 {repo_full} 中创建测试 Issue")
+    print("   添加标签 'ai-dev' 或评论 '/ai develop'")
+    print()
+
+    print("参考文档：")
+    print("  - README.md: 完整使用指南")
+    print("  - .env.example: 配置说明")
+    print()
+
+
+def main():
+    """主函数"""
+    print_header("AI 开发调度服务 - 环境配置向导")
+
+    print_info("本向导将帮助您配置 .env 文件")
+    print("  所需配置项：")
+    print("    ✓ GitHub Token")
+    print("    ✓ GitHub 仓库信息")
+    print("    ✓ GitHub Webhook Secret")
+    print("    ✓ 本地代码仓库路径")
+    print("    ✓ Anthropic API Key")
+    print("    ○ ngrok 配置（可选）")
+    print()
+
+    # 确认开始
+    ready = input_yes_no("是否开始配置？", default=True)
+    if not ready:
+        print_info("已取消配置")
+        sys.exit(0)
+
+    print()
+
+    # 收集所有配置
+    config = {}
+
+    # GitHub 配置
+    github_config = setup_github_config()
+    config.update(github_config)
+
+    # 仓库路径
+    repo_config = setup_repo_path()
+    config.update(repo_config)
+
+    # Anthropic API Key
+    api_config = setup_anthropic_api_key()
+    config.update(api_config)
+
+    # ngrok（可选）
+    ngrok_config = setup_ngrok()
+    config.update(ngrok_config)
+
+    # 写入 .env 文件
+    env_file = Path(__file__).parent.parent / '.env'
+    write_env_file(config, env_file)
+
+    # 打印后续步骤
+    print_next_steps(config)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print()
+        print_warning("\n配置已取消")
+        sys.exit(1)
+    except Exception as e:
+        print()
+        print_error(f"配置失败: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
