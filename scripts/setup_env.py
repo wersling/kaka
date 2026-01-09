@@ -144,7 +144,13 @@ def validate_repo_path(path: str) -> tuple[bool, str]:
     Returns:
         (是否有效, 错误消息)
     """
-    path_obj = Path(path).expanduser().resolve()
+    try:
+        # 先使用 os.path.expanduser()，它比 Path.expanduser() 更健壮
+        # 能够处理 HOME 环境变量未设置的情况
+        expanded = os.path.expanduser(path)
+        path_obj = Path(expanded).resolve()
+    except (RuntimeError, OSError) as e:
+        return False, f"无法展开路径: {e}"
 
     if not path_obj.exists():
         return False, f"路径不存在: {path_obj}"
@@ -305,7 +311,9 @@ def setup_repo_path() -> dict:
         is_valid, error_msg = validate_repo_path(path)
 
         if is_valid:
-            config['REPO_PATH'] = str(Path(path).expanduser().resolve())
+            # 使用 os.path.expanduser() 确保路径展开健壮性
+            expanded_path = os.path.expanduser(path)
+            config['REPO_PATH'] = str(Path(expanded_path).resolve())
             print_success(f"仓库路径验证通过: {config['REPO_PATH']}")
             break
         else:
@@ -487,6 +495,83 @@ def write_env_file(config: dict, env_file: Path) -> None:
     print_warning(f"请确保文件权限正确: chmod 600 {env_file}")
 
 
+def print_github_webhook_guide(config: dict) -> None:
+    """打印 GitHub Webhook 配置详细指南"""
+    print_header("GitHub Webhook 配置指南")
+
+    webhook_secret = config.get('GITHUB_WEBHOOK_SECRET', '')
+    repo_owner = config.get('GITHUB_REPO_OWNER', '')
+    repo_name = config.get('GITHUB_REPO_NAME', '')
+
+    print_info("步骤 1: 访问 GitHub 仓库设置")
+    print(f"   1. 打开浏览器，访问: https://github.com/{repo_owner}/{repo_name}")
+    print("   2. 点击仓库上方的【Settings】标签")
+    print("   3. 在左侧菜单中找到【Webhooks】并点击")
+    print()
+
+    print_info("步骤 2: 添加新 Webhook")
+    print("   1. 点击【Add webhook】按钮")
+    print()
+
+    print_info("步骤 3: 配置 Webhook 信息")
+    print()
+
+    # Webhook URL
+    if 'NGROK_AUTH_TOKEN' in config:
+        print(f"   {Colors.BOLD}Payload URL{Colors.ENDC}")
+        print("     格式: https://<your-ngrok-domain>/webhook/github")
+        if 'NGROK_DOMAIN' in config:
+            print(f"     示例: https://{config.get('NGROK_DOMAIN')}/webhook/github")
+        else:
+            print("     示例: https://abc123.ngrok.io/webhook/github")
+            print("     （启动 ngrok 后会显示你的域名，类似 abc123.ngrok.io）")
+        print()
+    else:
+        print(f"   {Colors.BOLD}Payload URL{Colors.ENDC}")
+        print("     格式: http://your-server:8000/webhook/github")
+        print("     示例: http://localhost:8000/webhook/github")
+        print()
+
+    # Content type
+    print(f"   {Colors.BOLD}Content type{Colors.ENDC}")
+    print("     选择: application/json")
+    print()
+
+    # Secret
+    print(f"   {Colors.BOLD}Secret{Colors.ENDC}")
+    print(f"     粘贴以下内容（已自动生成）：")
+    print(f"     {Colors.OKGREEN}{webhook_secret}{Colors.ENDC}")
+    print()
+    print_warning("     ⚠️  请妥善保管此密钥，不要泄露给他人！")
+    print()
+
+    # Events
+    print(f"   {Colors.BOLD}Events{Colors.ENDC}")
+    print("     选择: Let me select individual events")
+    print("     勾选以下事件：")
+    print(f"     {Colors.OKGREEN}☑ Issues{Colors.ENDC}")
+    print(f"     {Colors.OKGREEN}☑ Issue comments{Colors.ENDC}")
+    print()
+
+    # Active
+    print(f"   {Colors.BOLD}Active{Colors.ENDC}")
+    print(f"     {Colors.OKGREEN}☑ Active{Colors.ENDC} （默认已勾选）")
+    print()
+
+    print_info("步骤 4: 保存配置")
+    print("   1. 滚动到页面底部，点击【Add webhook】按钮")
+    print("   2. 如果看到绿色勾选标记，说明 Webhook 配置成功！")
+    print()
+
+    print_info("步骤 5: 测试 Webhook")
+    print("   1. 在 Webhook 列表中找到刚创建的 Webhook")
+    print("   2. 点击进入，查看【Recent Deliveries】")
+    print("   3. 如果没有测试记录，可以：")
+    print("      - 点击【Redeliver】测试最近的事件")
+    print("      - 或在仓库中创建新 Issue 触发 Webhook")
+    print()
+
+
 def print_next_steps(config: dict) -> None:
     """打印后续步骤"""
     print_header("配置完成")
@@ -497,37 +582,47 @@ def print_next_steps(config: dict) -> None:
     print("后续步骤：")
     print()
 
-    print("1. 验证配置")
+    print("1️⃣  验证配置")
     print("   $ python -c \"from app.config import load_config; print(load_config())\"")
     print()
 
-    print("2. 启动服务")
+    print("2️⃣  启动服务")
     print("   $ ./scripts/dev.sh")
     print()
 
     # 如果配置了 ngrok
-    if 'NGROK_AUTH_TOKEN' in config:
-        print("3. 启动 ngrok（新终端）")
-        print("   $ ngrok http 8000")
-        print()
-        print("4. 配置 GitHub Webhook")
-        print("   URL: https://<your-ngrok-domain>/webhook/github")
-        print(f"   Secret: {config.get('GITHUB_WEBHOOK_SECRET', '')[:16]}...")
-        print()
-    else:
-        print("3. 配置 GitHub Webhook")
-        print("   URL: http://your-server:8000/webhook/github")
-        print(f"   Secret: {config.get('GITHUB_WEBHOOK_SECRET', '')[:16]}...")
-        print()
-
     repo_full = f"{config.get('GITHUB_REPO_OWNER', '')}/{config.get('GITHUB_REPO_NAME', '')}"
-    print(f"5. 在 GitHub 仓库 {repo_full} 中创建测试 Issue")
+    if 'NGROK_AUTH_TOKEN' in config:
+        print("3️⃣  启动 ngrok（新终端）")
+        print("   $ ngrok http 8000")
+        print("   复制显示的转发 URL（例如 https://abc123.ngrok.io）")
+        print()
+        print("4️⃣  配置 GitHub Webhook")
+        print("   （详细指南请见下方）")
+        print()
+        print("5️⃣  测试功能")
+    else:
+        print("3️⃣  配置 GitHub Webhook")
+        print("   （详细指南请见下方）")
+        print()
+        print("4️⃣  测试功能")
+    print(f"   在 GitHub 仓库 {repo_full} 中创建测试 Issue")
     print("   添加标签 'ai-dev' 或评论 '/ai develop'")
     print()
 
+    print("─" * 70)
+    print()
+
+    # 打印详细的 Webhook 配置指南
+    print_github_webhook_guide(config)
+
+    print("─" * 70)
+    print()
+
     print("参考文档：")
-    print("  - README.md: 完整使用指南")
-    print("  - .env.example: 配置说明")
+    print("  📖 README.md: 完整使用指南")
+    print("  📖 .env.example: 配置说明")
+    print("  📖 docs/SETUP_ENV.md: 环境配置详细文档")
     print()
 
 

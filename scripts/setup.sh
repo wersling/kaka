@@ -103,8 +103,8 @@ echo -e "${GREEN}✅ 目录创建完成${NC}"
 # 生成 .env 文件
 echo ""
 if [ ! -f ".env" ]; then
-    echo "📝 创建 .env 文件..."
-    cat > .env << 'EOF'
+    echo "📝 创建 .env.example 模板文件..."
+    cat > .env.example << 'EOF'
 # GitHub 配置
 GITHUB_WEBHOOK_SECRET=your-webhook-secret-here
 GITHUB_TOKEN=ghp_your-token-here
@@ -128,9 +128,18 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 TELEGRAM_BOT_TOKEN=your-bot-token
 TELEGRAM_CHAT_ID=your-chat-id
 EOF
-    echo -e "${GREEN}✅ .env 文件创建完成${NC}"
+    echo -e "${GREEN}✅ .env.example 模板文件创建完成${NC}"
 else
-    echo -e "${YELLOW}⚠️  .env 文件已存在，跳过创建${NC}"
+    echo -e "${YELLOW}⚠️  .env.example 文件已存在，跳过创建${NC}"
+fi
+
+# 检查是否存在 .env 文件
+if [ ! -f ".env" ]; then
+    echo -e "${YELLOW}⚠️  未找到 .env 文件${NC}"
+    echo ""
+else
+    echo -e "${GREEN}✅ .env 文件已存在${NC}"
+    echo ""
 fi
 
 # 检查 Claude Code CLI
@@ -155,11 +164,102 @@ echo ""
 echo "======================================"
 echo -e "${GREEN}✅ 初始化完成！${NC}"
 echo ""
-echo "📝 下一步操作："
-echo "  1. 编辑 .env 文件，填写必要的配置信息"
-echo "  2. 确保 Claude Code CLI 已安装"
-echo "  3. 运行: source venv/bin/activate"
-echo "  4. 启动服务: ./scripts/dev.sh"
+
+# 检查是否存在 .env 文件
+NEED_CONFIG=false
+if [ ! -f ".env" ]; then
+    NEED_CONFIG=true
+    echo -e "${YELLOW}⚠️  检测到 .env 文件不存在${NC}"
+    echo ""
+fi
+
+# 询问是否运行配置向导
+echo "🔧 环境配置向导"
+echo ""
+echo "是否需要运行交互式配置向导来创建 .env 文件？"
+echo "  配置向导会帮助您设置："
+echo "    • GitHub Token、仓库信息"
+echo "    • GitHub Webhook Secret（自动生成）"
+echo "    • 本地代码仓库路径"
+echo "    • Anthropic API Key"
+echo "    • ngrok 配置（可选）"
+echo ""
+read -p "是否运行配置向导？ [Y/n]: " -n 1 -r
+echo ""
+echo ""
+
+# 默认为 Y，除非用户明确输入 n 或 N
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    if [ -f "scripts/setup_env.py" ]; then
+        echo -e "${GREEN}🚀 启动配置向导...${NC}"
+        echo ""
+        # 使用虚拟环境中的 Python 运行配置脚本
+        if [ -f "venv/bin/python" ]; then
+            venv/bin/python scripts/setup_env.py
+        else
+            python3 scripts/setup_env.py
+        fi
+
+        # 检查配置是否成功
+        if [ $? -eq 0 ] && [ -f ".env" ]; then
+            echo ""
+            echo -e "${GREEN}✅ 配置成功！${NC}"
+        else
+            echo ""
+            echo -e "${YELLOW}⚠️  配置未完成或失败${NC}"
+            echo "您可以稍后手动运行: python scripts/setup_env.py"
+        fi
+    else
+        echo -e "${RED}❌ 未找到配置脚本: scripts/setup_env.py${NC}"
+        echo "请手动创建 .env 文件"
+    fi
+else
+    echo "跳过配置向导"
+    echo ""
+    if [ "$NEED_CONFIG" = true ]; then
+        echo -e "${YELLOW}⚠️  请手动创建 .env 文件：${NC}"
+        echo "  方式 1: 运行配置向导"
+        echo "    $ python scripts/setup_env.py"
+        echo ""
+        echo "  方式 2: 复制模板并编辑"
+        echo "    $ cp .env.example .env"
+        echo "    $ nano .env  # 或使用您喜欢的编辑器"
+        echo ""
+    fi
+fi
+
+# 显示后续步骤
+echo "======================================"
+echo -e "${GREEN}📝 下一步操作${NC}"
+echo ""
+
+# 检查 .env 文件是否存在
+if [ -f ".env" ]; then
+    echo -e "${GREEN}✅ 1. 环境已配置${NC}"
+    echo "   如需修改配置，编辑 .env 文件"
+else
+    echo -e "${YELLOW}⚠️  1. 配置环境变量${NC}"
+    echo "   $ python scripts/setup_env.py"
+    echo "   或编辑 .env 文件"
+fi
+
+echo ""
+echo -e "${GREEN}✅ 2. 确保 Claude Code CLI 已安装${NC}"
+if command -v claude &> /dev/null; then
+    echo "   $(claude --version 2>&1 || true)"
+else
+    echo -e "${YELLOW}   ⚠️  未找到 Claude Code CLI${NC}"
+    echo "   请安装: npm install -g @anthropic-ai/claude-code"
+fi
+
+echo ""
+echo -e "${GREEN}✅ 3. 激活虚拟环境${NC}"
+echo "   $ source venv/bin/activate"
+
+echo ""
+echo -e "${GREEN}✅ 4. 启动开发服务器${NC}"
+echo "   $ ./scripts/dev.sh"
+
 echo ""
 echo "📚 更多信息请参考 README.md"
 echo ""
