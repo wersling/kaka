@@ -2,14 +2,17 @@
 validators.py 模块的完整单元测试套件
 
 测试覆盖所有验证函数，包括：
-- HMAC-SHA256 签名验证
+- HMAC-SHA256 签名验证（完整的安全场景、边界条件和性能测试）
 - IP 白名单验证
 - Issue 事件触发条件验证
 - 评论触发条件验证
 - 敏感数据清理
+
+测试覆盖率目标：100%
 """
 
 import os
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -240,6 +243,366 @@ class TestVerifyWebhookSignature:
             )
             mock_compare.assert_called_once()
             assert result is False
+
+    # =========================================================================
+    # 安全场景测试
+    # =========================================================================
+
+    def test_tampered_signature_rejection(
+        self, sample_payload, webhook_secret
+    ):
+        """
+        测试：篡改后的签名应该被拒绝
+
+        场景：修改 payload 后的签名不应该通过验证
+        期望：返回 False
+        """
+        # 计算 payload 的签名
+        original_signature = _calculate_signature(
+            sample_payload, webhook_secret
+        )
+
+        # 修改 payload
+        tampered_payload = b'{"action": "unlabeled", "issue": {"id": 999}}'
+
+        # 使用原始签名验证修改后的 payload
+        result = verify_webhook_signature(
+            payload=tampered_payload,
+            signature_header=original_signature,
+            secret=webhook_secret,
+        )
+        assert result is False
+
+    @pytest.mark.parametrize(
+        "invalid_signature",
+        [
+            "sha256=",  # 空签名
+            "sha256=abc",  # 太短的签名
+            "sha256=ggg" + "0" * 61,  # 包含无效十六进制字符
+            "sha256=" + "x" * 64,  # 全部无效字符
+            "sha256=" + "0" * 63,  # 长度不足
+            "sha256=" + "0" * 65,  # 长度过长
+        ],
+    )
+    def test_invalid_hex_characters_rejected(
+        self, invalid_signature, sample_payload, webhook_secret
+    ):
+        """
+        测试：无效的十六进制字符应该被拒绝
+
+        场景：签名包含无效的十六进制字符或长度不正确
+        期望：返回 False
+        """
+        result = verify_webhook_signature(
+            payload=sample_payload,
+            signature_header=invalid_signature,
+            secret=webhook_secret,
+        )
+        assert result is False
+
+    def test_empty_string_signature_rejected(
+        self, sample_payload, webhook_secret
+    ):
+        """
+        测试：空字符串签名应该被拒绝
+
+        场景：signature_header 为空字符串 ""
+        期望：返回 False
+        """
+        result = verify_webhook_signature(
+            payload=sample_payload,
+            signature_header="",
+            secret=webhook_secret,
+        )
+        assert result is False
+
+    def test_wrong_signature_algorithm_rejected(
+        self, sample_payload, webhook_secret
+    ):
+        """
+        测试：错误的签名算法应该被拒绝
+
+        场景：签名使用错误的算法前缀（如 sha1=）
+        期望：返回 False
+        """
+        # 计算 SHA1 签名（如果实现的话）
+        wrong_algorithm_signature = "sha1=" + "a" * 40
+        result = verify_webhook_signature(
+            payload=sample_payload,
+            signature_header=wrong_algorithm_signature,
+            secret=webhook_secret,
+        )
+        assert result is False
+
+    def test_none_signature_rejected(
+        self, sample_payload, webhook_secret
+    ):
+        """
+        测试：None 签名应该被拒绝
+
+        场景：signature_header 为 None
+        期望：返回 False
+        """
+        result = verify_webhook_signature(
+            payload=sample_payload,
+            signature_header=None,
+            secret=webhook_secret,
+        )
+        assert result is False
+
+    def test_signature_with_extra_whitespace_rejected(
+        self, sample_payload, webhook_secret
+    ):
+        """
+        测试：包含额外空格的签名应该被拒绝
+
+        场景：签名前后有空格
+        期望：返回 False
+        """
+        valid_signature = _calculate_signature(sample_payload, webhook_secret)
+        invalid_signature = f" {valid_signature} "
+        result = verify_webhook_signature(
+            payload=sample_payload,
+            signature_header=invalid_signature,
+            secret=webhook_secret,
+        )
+        assert result is False
+
+    # =========================================================================
+    # 边界条件测试
+    # =========================================================================
+
+    def test_empty_payload_rejected(self, webhook_secret):
+        """
+        测试：空 payload 应该被拒绝
+
+        场景：payload 为空字节 b""
+        期望：返回 False
+        """
+        signature = _calculate_signature(b"", webhook_secret)
+        result = verify_webhook_signature(
+            payload=b"",
+            signature_header=signature,
+            secret=webhook_secret,
+        )
+        assert result is False
+
+    def test_large_payload_handled(self, webhook_secret):
+        """
+        测试：大 payload 应该能够处理
+
+        场景：payload 为 1MB 数据
+        期望：正确处理并验证签名
+        """
+        # 创建 1MB 的 payload
+        large_payload = b'{"data": "' + b"x" * (1024 * 1024) + b'"}'
+        signature = _calculate_signature(large_payload, webhook_secret)
+
+        result = verify_webhook_signature(
+            payload=large_payload,
+            signature_header=signature,
+            secret=webhook_secret,
+        )
+        assert result is True
+
+    def test_special_characters_payload(self, webhook_secret):
+        """
+        测试：包含特殊字符的 payload
+
+        场景：payload 包含特殊字符、换行、引号等
+        期望：正确处理并验证签名
+        """
+        special_payload = b'{"text": "Hello\nWorld\t!@#$%^&*()"}'
+        signature = _calculate_signature(special_payload, webhook_secret)
+
+        result = verify_webhook_signature(
+            payload=special_payload,
+            signature_header=signature,
+            secret=webhook_secret,
+        )
+        assert result is True
+
+    def test_unicode_payload(self, webhook_secret):
+        """
+        测试：Unicode 字符的 payload
+
+        场景：payload 包含多语言 Unicode 字符
+        期望：正确处理并验证签名
+        """
+        unicode_payload = (
+            b'{"text": "\xe4\xb8\xad\xe6\x96\x87 \xf0\x9f\x98\x80 '
+            b'\xd0\x9f\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82"}'
+        )
+        signature = _calculate_signature(unicode_payload, webhook_secret)
+
+        result = verify_webhook_signature(
+            payload=unicode_payload,
+            signature_header=signature,
+            secret=webhook_secret,
+        )
+        assert result is True
+
+    def test_binary_payload(self, webhook_secret):
+        """
+        测试：二进制 payload
+
+        场景：payload 包含二进制数据
+        期望：正确处理并验证签名
+        """
+        binary_payload = bytes(range(256))
+        signature = _calculate_signature(binary_payload, webhook_secret)
+
+        result = verify_webhook_signature(
+            payload=binary_payload,
+            signature_header=signature,
+            secret=webhook_secret,
+        )
+        assert result is True
+
+    def test_very_long_secret(self, sample_payload):
+        """
+        测试：非常长的密钥
+
+        场景：secret 长度为 1000 字符
+        期望：正确处理并验证签名
+        """
+        long_secret = "a" * 1000
+        signature = _calculate_signature(sample_payload, long_secret)
+
+        result = verify_webhook_signature(
+            payload=sample_payload,
+            signature_header=signature,
+            secret=long_secret,
+        )
+        assert result is True
+
+    def test_secret_with_special_characters(self, sample_payload):
+        """
+        测试：包含特殊字符的密钥
+
+        场景：secret 包含特殊字符
+        期望：正确处理并验证签名
+        """
+        special_secret = "test-secret!@#$%^&*()_+-=[]{}|;':,.<>?/~`"
+        signature = _calculate_signature(sample_payload, special_secret)
+
+        result = verify_webhook_signature(
+            payload=sample_payload,
+            signature_header=signature,
+            secret=special_secret,
+        )
+        assert result is True
+
+    # =========================================================================
+    # 性能测试
+    # =========================================================================
+
+    def test_signature_verification_performance(
+        self, sample_payload, webhook_secret
+    ):
+        """
+        测试：签名验证性能基准
+
+        场景：单次签名验证性能
+        期望：验证时间 < 1ms
+        """
+        signature = _calculate_signature(sample_payload, webhook_secret)
+
+        # 预热
+        for _ in range(10):
+            verify_webhook_signature(
+                payload=sample_payload,
+                signature_header=signature,
+                secret=webhook_secret,
+            )
+
+        # 测量
+        iterations = 1000
+        start_time = time.perf_counter()
+
+        for _ in range(iterations):
+            verify_webhook_signature(
+                payload=sample_payload,
+                signature_header=signature,
+                secret=webhook_secret,
+            )
+
+        end_time = time.perf_counter()
+        avg_time_ms = (end_time - start_time) / iterations * 1000
+
+        # 验证平均时间 < 1ms
+        assert (
+            avg_time_ms < 1.0
+        ), f"平均签名验证时间 {avg_time_ms:.3f}ms 超过 1ms 阈值"
+
+    def test_batch_verification_performance(self, webhook_secret):
+        """
+        测试：批量签名验证性能
+
+        场景：验证 100 个不同的签名
+        期望：总时间合理（< 100ms）
+        """
+        payloads_and_signatures = []
+        for i in range(100):
+            payload = f'{{"id": {i}}}'.encode()
+            signature = _calculate_signature(payload, webhook_secret)
+            payloads_and_signatures.append((payload, signature))
+
+        start_time = time.perf_counter()
+
+        for payload, signature in payloads_and_signatures:
+            verify_webhook_signature(
+                payload=payload,
+                signature_header=signature,
+                secret=webhook_secret,
+            )
+
+        end_time = time.perf_counter()
+        total_time_ms = (end_time - start_time) * 1000
+
+        # 验证总时间 < 100ms
+        assert (
+            total_time_ms < 100.0
+        ), f"批量验证总时间 {total_time_ms:.2f}ms 超过 100ms 阈值"
+
+    # =========================================================================
+    # 编码测试
+    # =========================================================================
+
+    def test_utf8_encoding_handling(self, webhook_secret):
+        """
+        测试：UTF-8 编码处理
+
+        场景：payload 为 UTF-8 编码的 Unicode 字符
+        期望：正确处理并验证签名
+        """
+        # 包含各种 Unicode 字符的 payload
+        utf8_payload = (
+            b'{"message": "Hello \xc4\x87\xc4\x87\xc4\x87 " '
+            b'\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82 " '
+            b'\xe4\xb8\xad\xe6\x96\x87"}'
+        )
+        signature = _calculate_signature(utf8_payload, webhook_secret)
+
+        result = verify_webhook_signature(
+            payload=utf8_payload,
+            signature_header=signature,
+            secret=webhook_secret,
+        )
+        assert result is True
+
+    def test_secret_encoding_consistency(self, sample_payload):
+        """
+        测试：密钥编码一致性
+
+        场景：确保密钥编码在不同调用中保持一致
+        期望：相同密钥产生相同签名
+        """
+        secret = "test_secret_with_Unicode_Ñ"
+        sig1 = _calculate_signature(sample_payload, secret)
+        sig2 = _calculate_signature(sample_payload, secret)
+
+        assert sig1 == sig2, "相同密钥应该产生相同签名"
 
 
 # =============================================================================

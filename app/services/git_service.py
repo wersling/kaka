@@ -6,7 +6,7 @@ Git 操作服务
 
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import git
 from app.utils.logger import LoggerMixin, get_logger
@@ -113,7 +113,9 @@ class GitService(LoggerMixin):
 
         Args:
             message: 提交消息
-            add_all: 是否添加所有变更（git add -A）
+            add_all: 是否添加所有变更到暂存区（git add -A）
+                     - True: 添加所有变更（默认）
+                     - False: 只提交已暂存的变更，不添加新变更
 
         Returns:
             bool: 是否有提交（True）或没有变更需要提交（False）
@@ -122,15 +124,18 @@ class GitService(LoggerMixin):
             Exception: 提交失败
         """
         try:
-            # 检查是否有变更
-            if not self.repo.is_dirty() and not self.repo.untracked_files:
-                self.logger.info("没有变更需要提交")
-                return False
-
             self.logger.info(f"准备提交变更: {message}")
 
-            # 添加变更
+            # 检查是否有变更
+            has_changes = self.repo.is_dirty() or self.repo.untracked_files
+
             if add_all:
+                # 添加所有变更到暂存区
+                if not has_changes:
+                    self.logger.info("没有变更需要提交")
+                    return False
+
+                self.logger.debug(f"添加所有变更到暂存区")
                 self.repo.index.add("*")
                 # 添加未跟踪的文件
                 for file_path in self.repo.untracked_files:
@@ -139,6 +144,11 @@ class GitService(LoggerMixin):
                     except Exception:
                         # 忽略无法添加的文件（如 .gitignore 中的文件）
                         pass
+            else:
+                # 不添加新变更，只检查是否有已暂存的变更
+                if not self.repo.index.diff("HEAD"):
+                    self.logger.info("没有暂存的变更需要提交 (add_all=False)")
+                    return False
 
             # 检查是否有暂存的变更
             if not self.repo.index.diff("HEAD"):
@@ -223,7 +233,7 @@ class GitService(LoggerMixin):
         """
         return self.repo.active_branch.name
 
-    def get_status(self) -> dict[str, any]:
+    def get_status(self) -> dict[str, Any]:
         """
         获取仓库状态
 

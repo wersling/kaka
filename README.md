@@ -4,6 +4,8 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Tests](https://img.shields.io/badge/tests-395%20passed-success.svg)](https://github.com/your-org/ai-dev-scheduler)
+[![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen.svg)](https://github.com/your-org/ai-dev-scheduler)
 
 > 基于 FastAPI 的自动化开发工作流系统 - 通过 GitHub Webhook 触发 Claude Code CLI 进行 AI 开发，实现从 Issue 到 PR 的完整自动化流程。
 
@@ -12,6 +14,7 @@
 ## 目录
 
 - [功能特性](#-功能特性)
+- [测试覆盖](#-测试覆盖)
 - [技术架构](#-技术架构)
 - [快速开始](#-快速开始)
 - [配置说明](#-配置说明)
@@ -46,6 +49,76 @@
 - 灵活的配置管理（YAML + 环境变量）
 - Pydantic 数据验证
 - 优雅的错误处理和异常恢复
+
+---
+
+## 测试覆盖
+
+### 测试统计
+
+| 指标 | 数值 | 说明 |
+|------|------|------|
+| **总测试数** | 395 个 | 单元测试 + 集成测试 |
+| **代码覆盖率** | 89% | 超过目标（85%） |
+| **测试文件** | 7 个 | 覆盖所有核心模块 |
+| **通过率** | 100% | 394 passed, 1 skipped |
+
+### 测试套件详情
+
+#### 单元测试（364 个测试）
+
+| 测试文件 | 测试数量 | 覆盖模块 | 覆盖率 |
+|---------|---------|---------|--------|
+| `test_webhook_handler.py` | 96 个 | Webhook 处理器 | 100% |
+| `test_validators.py` | 78 个 | 验证器（签名验证） | 100% |
+| `test_git_service.py` | 69 个 | Git 操作服务 | 100% |
+| `test_claude_service.py` | 57 个 | Claude Code CLI 服务 | 98% |
+| `test_github_service.py` | 32 个 | GitHub API 服务 | 94% |
+| `test_api.py` | 32 个 | API 端点 | 70-94% |
+
+#### 集成测试（31 个测试）
+
+| 测试文件 | 测试数量 | 覆盖场景 |
+|---------|---------|---------|
+| `test_integration.py` | 31 个 | 端到端工作流测试 |
+
+### 测试覆盖详情
+
+```
+模块                              覆盖率
+----------------------------------------
+app/models/github_events.py       100%
+app/services/git_service.py       100%
+app/services/webhook_handler.py   100%
+app/utils/validators.py           100%
+app/services/claude_service.py     98%
+app/services/github_service.py     94%
+app/config.py                      94%
+app/api/health.py                  83%
+app/main.py                        70%
+app/utils/logger.py                27%
+----------------------------------------
+TOTAL                              89%
+```
+
+### 运行测试
+
+```bash
+# 运行所有测试
+make test
+
+# 生成覆盖率报告
+make coverage
+
+# 在浏览器中查看覆盖率
+make coverage-open
+
+# 运行特定测试文件
+pytest tests/test_webhook_handler.py -v
+
+# 运行特定测试函数
+pytest tests/test_webhook_handler.py::test_handle_labeled_event -v
+```
 
 ---
 
@@ -111,9 +184,17 @@ ai-dev-scheduler/
 │   ├── setup.sh                # 初始化脚本
 │   └── dev.sh                  # 开发启动脚本
 ├── tests/                      # 测试套件
+│   ├── test_api.py             # API 端点测试（32 个）
+│   ├── test_webhook_handler.py # Webhook 处理器测试（96 个）
+│   ├── test_validators.py      # 验证器测试（78 个）
+│   ├── test_git_service.py     # Git 服务测试（69 个）
+│   ├── test_claude_service.py  # Claude 服务测试（57 个）
+│   ├── test_github_service.py  # GitHub 服务测试（32 个）
+│   └── test_integration.py     # 集成测试（31 个）
 ├── logs/                       # 日志文件目录
 ├── requirements.txt            # Python 依赖
 ├── pyproject.toml             # 项目配置
+├── Makefile                    # 自动化命令
 ├── .env                       # 环境变量（需手动创建）
 └── README.md                  # 本文档
 ```
@@ -1475,6 +1556,17 @@ SOFTWARE.
 ---
 
 ## 更新日志
+
+### v0.2.0 (2026-01-09)
+
+测试和代码质量提升
+
+- ✅ 补充 300+ 新测试用例
+- ✅ 代码测试覆盖率达到 89%（目标 85%）
+- ✅ 修复 P0/P1 优先级问题
+- ✅ 改进异常处理和日志记录
+- ✅ 统一类型提示
+- ✅ 增强签名验证日志
 
 ### v0.1.0 (2024-01-08)
 

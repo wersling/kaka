@@ -199,3 +199,64 @@ reset: clean-all init ## 重置项目（完全清理+重新初始化）
 docs: ## 在浏览器中打开文档
 	@echo "$(BLUE)📖 打开文档...$(NC)"
 	@open README.md 2>/dev/null || python -m webbrowser README.md
+
+# 性能测试目标
+.PHONY: test-performance test-benchmark test-stress test-concurrency
+
+# 运行所有性能测试
+test-performance:
+	@echo "运行完整性能测试套件..."
+	python -m pytest tests/test_performance.py -v --tb=short --benchmark-skip
+
+# 运行性能基准测试
+test-benchmark:
+	@echo "运行性能基准测试..."
+	python -m pytest tests/test_performance.py::TestPerformanceBaselines \
+		-v \
+		--benchmark-only \
+		--benchmark-columns=min,max,mean,stddev,median,ops,iqr \
+		--benchmark-sort=name
+
+# 运行并发测试
+test-concurrency:
+	@echo "运行并发性能测试..."
+	python -m pytest tests/test_performance.py::TestConcurrencyPerformance \
+		-v -s --tb=short --benchmark-skip
+
+# 运行压力测试
+test-stress:
+	@echo "运行压力测试..."
+	python -m pytest tests/test_performance.py::TestStressTesting \
+		-v -s --tb=short --benchmark-skip
+
+# 生成性能报告
+perf-report:
+	@echo "生成性能测试报告..."
+	python -m pytest tests/test_performance.py::TestPerformanceBaselines \
+		--benchmark-only \
+		--benchmark-autosave \
+		--benchmark-save=data/baseline \
+		--benchmark-json=reports/benchmark_results.json
+	@echo "✓ 基准数据已保存到 reports/benchmark_results.json"
+
+# 性能回归检测
+perf-check:
+	@echo "检测性能回归..."
+	python -m pytest tests/test_performance.py::TestPerformanceBaselines \
+		--benchmark-only \
+		--benchmark-compare-fail=mean:5% \
+		--benchmark-save=data/baseline \
+		|| echo "⚠️  检测到性能退化！"
+
+# 快速性能检查（仅关键指标）
+perf-quick:
+	@echo "快速性能检查..."
+	python -m pytest tests/test_performance.py \
+		-k "signature_verification or webhook_event_routing or concurrent_webhook" \
+		-v --tb=line --benchmark-skip
+
+# 内存泄漏检测
+perf-memory:
+	@echo "检测内存泄漏..."
+	python -m pytest tests/test_performance.py::TestStressTesting::test_memory_leak_detection \
+		-v -s --benchmark-skip

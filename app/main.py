@@ -4,11 +4,12 @@ AI 开发调度服务 - FastAPI 应用入口
 接收 GitHub Webhook 事件，触发 Claude Code CLI 进行自动化开发
 """
 
+import json
 import time
 from contextlib import asynccontextmanager
 from typing import Any, Awaitable, Callable
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -28,8 +29,8 @@ class TimingMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self,
         request: Request,
-        call_next: Callable[[Request], Awaitable[Request]],
-    ) -> Request:
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         """处理请求并记录执行时间"""
         start_time = time.time()
 
@@ -218,9 +219,9 @@ async def root() -> dict[str, str]:
 @app.post("/webhook/github", tags=["Webhook"])
 async def github_webhook(
     request: Request,
-    x_hub_signature_256: str | None = None,
-    x_github_event: str | None = None,
-    x_github_delivery: str | None = None,
+    x_hub_signature_256: str | None = Header(None, alias="X-Hub-Signature-256"),
+    x_github_event: str | None = Header(None, alias="X-GitHub-Event"),
+    x_github_delivery: str | None = Header(None, alias="X-GitHub-Delivery"),
 ) -> dict[str, Any]:
     """
     GitHub Webhook 接收端点
@@ -237,12 +238,26 @@ async def github_webhook(
 
         config = get_config()
 
+        # 详细日志记录签名验证过程（不泄露敏感信息）
+        if x_hub_signature_256:
+            sig_format = x_hub_signature_256.split('=')[0] if '=' in x_hub_signature_256 else 'unknown'
+            sig_length = len(x_hub_signature_256.split('=')[1]) if '=' in x_hub_signature_256 else 0
+            logger.debug(
+                f"Webhook 签名验证: format={sig_format}, length={sig_length}"
+            )
+        else:
+            logger.warning("Webhook 签名缺失：未提供 X-Hub-Signature-256 头")
+
         if not verify_webhook_signature(
             payload,
             x_hub_signature_256,
             config.github.webhook_secret,
         ):
-            logger.warning("Webhook 签名验证失败")
+            logger.warning(
+                f"Webhook 签名验证失败: "
+                f"提供的签名{'存在' if x_hub_signature_256 else '缺失'}, "
+                f"验证未通过"
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid signature",
@@ -281,13 +296,17 @@ async def github_webhook(
         # 创建后台任务
         asyncio.create_task(process_event())
 
-        # 立即返回响应
-        return {
-            "status": "accepted",
-            "message": "Webhook 已接收，正在后台处理",
-            "delivery_id": x_github_delivery,
-            "event_type": event_type,
-        }
+        # 立即返回响应 (202 Accepted)
+        return Response(
+            content=json.dumps({
+                "status": "accepted",
+                "message": "Webhook 已接收，正在后台处理",
+                "delivery_id": x_github_delivery,
+                "event_type": event_type,
+            }),
+            status_code=status.HTTP_202_ACCEPTED,
+            media_type="application/json",
+        )
 
     except HTTPException:
         raise

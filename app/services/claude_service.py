@@ -204,9 +204,11 @@ Issue 内容:
             asyncio.TimeoutError: 执行超时
             Exception: 执行失败
         """
+        prompt_file = None
         try:
             # 将 prompt 写入临时文件
             import tempfile
+            import os
 
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -282,6 +284,15 @@ Issue 内容:
         except Exception as e:
             self.logger.error(f"执行 Claude CLI 失败: {e}", exc_info=True)
             raise
+        finally:
+            # 清理临时文件（安全修复：确保敏感prompt被删除）
+            if prompt_file and os.path.exists(prompt_file):
+                try:
+                    os.remove(prompt_file)
+                    self.logger.debug(f"已清理临时文件: {prompt_file}")
+                except Exception as e:
+                    # 记录警告但不要抛出异常（清理失败不影响主流程）
+                    self.logger.warning(f"清理临时文件失败: {e}")
 
     async def test_connection(self) -> bool:
         """

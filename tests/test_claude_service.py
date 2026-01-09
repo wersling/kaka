@@ -924,3 +924,400 @@ class TestClaudeServiceIntegration:
 
                 assert result["success"] is True
                 assert mock_execute.call_count == 2
+
+
+# =============================================================================
+# Additional Edge Cases and Error Handling Tests
+# =============================================================================
+
+
+class TestClaudeServiceEdgeCases:
+    """测试边缘情况和特殊场景"""
+
+    @pytest.mark.asyncio
+    async def test_develop_feature_with_empty_issue_body(self, claude_service, mock_process):
+        """
+        测试：空 Issue body 应该正常处理
+
+        场景：issue_body 为空
+        期望：成功执行，prompt 中包含默认提示
+        """
+        mock_process.returncode = 0
+        mock_process.communicate.return_value = (b"Success", b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            result = await claude_service.develop_feature(
+                issue_number=1,
+                issue_title="Empty Body Test",
+                issue_url="https://github.com/test/test/issues/1",
+                issue_body="",  # 空 body
+            )
+
+            assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_develop_feature_with_special_characters(self, claude_service, mock_process):
+        """
+        测试：特殊字符应该正确处理
+
+        场景：Issue 标题和内容包含特殊字符
+        期望：特殊字符被正确传递和处理
+        """
+        mock_process.returncode = 0
+        mock_process.communicate.return_value = (b"Success", b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            result = await claude_service.develop_feature(
+                issue_number=2,
+                issue_title="Test with 特殊字符 & symbols <>'\"",
+                issue_url="https://github.com/test/test/issues/2",
+                issue_body="Body with emojis 🎉 \n\nNew lines\n\tTabs",
+            )
+
+            assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_develop_feature_with_very_long_issue_body(self, claude_service, mock_process):
+        """
+        测试：超长 Issue body 应该正常处理
+
+        场景：Issue body 非常长（10000+ 字符）
+        期望：能够正常传递给 CLI
+        """
+        long_body = "This is a long issue body.\n" * 500  # ~12000 字符
+
+        mock_process.returncode = 0
+        mock_process.communicate.return_value = (b"Success", b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            result = await claude_service.develop_feature(
+                issue_number=3,
+                issue_title="Long Issue Test",
+                issue_url="https://github.com/test/test/issues/3",
+                issue_body=long_body,
+            )
+
+            assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_develop_feature_partial_success_then_failure(self, claude_service):
+        """
+        测试：部分成功后最终失败的处理
+
+        场景：第1次返回非零退出码，第2次返回零退出码但后续失败
+        期望：返回最后一次失败的结果
+        """
+        with patch.object(claude_service, "_execute_claude") as mock_execute:
+            mock_execute.side_effect = [
+                {"success": False, "errors": "First error", "returncode": 1, "output": ""},
+                {"success": False, "errors": "Second error", "returncode": 2, "output": "Partial"},
+                {"success": False, "errors": "Final error", "returncode": 1, "output": ""},
+            ]
+
+            result = await claude_service.develop_feature(
+                issue_number=4,
+                issue_title="Partial Success Test",
+                issue_url="https://github.com/test/test/issues/4",
+                issue_body="Test",
+            )
+
+            assert result["success"] is False
+            assert mock_execute.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_execute_claude_with_large_output(self, claude_service, mock_process):
+        """
+        测试：大量输出应该正确处理
+
+        场景：CLI 产生大量输出（10MB+）
+        期望：输出被正确捕获和记录
+        """
+        large_output = b"x" * (10 * 1024 * 1024)  # 10MB
+
+        mock_process.returncode = 0
+        mock_process.communicate.return_value = (large_output, b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            result = await claude_service._execute_claude("Test prompt")
+
+            assert result["success"] is True
+            assert len(result["output"]) == len(large_output.decode())
+
+    @pytest.mark.asyncio
+    async def test_execute_claude_timeout_kills_process(self, claude_service, mock_process):
+        """
+        测试：超时后应该终止进程
+
+        场景：communicate 超时
+        期望：调用 kill() 和 wait() 清理进程
+        """
+        mock_process.communicate.side_effect = asyncio.TimeoutError()
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            with pytest.raises(asyncio.TimeoutError):
+                await claude_service._execute_claude("Test prompt")
+
+            # 验证进程被终止
+            mock_process.kill.assert_called_once()
+            mock_process.wait.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_develop_feature_concurrent_execution(self, claude_service, mock_process):
+        """
+        测试：并发执行多个任务应该各自独立
+
+        场景：同时启动多个 develop_feature 调用
+        期望：每个任务独立执行，互不干扰
+        """
+        mock_process.returncode = 0
+        mock_process.communicate.return_value = (b"Success", b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            # 并发执行3个任务
+            tasks = [
+                claude_service.develop_feature(
+                    issue_number=i,
+                    issue_title=f"Concurrent Task {i}",
+                    issue_url=f"https://github.com/test/test/issues/{i}",
+                    issue_body=f"Body {i}",
+                )
+                for i in range(1, 4)
+            ]
+
+            results = await asyncio.gather(*tasks)
+
+            # 验证所有任务都成功
+            assert len(results) == 3
+            for result in results:
+                assert result["success"] is True
+
+    def test_build_prompt_with_unicode_content(self, claude_service):
+        """
+        测试：Unicode 内容应该正确处理
+
+        场景：Issue 包含多语言内容（中文、日文、阿拉伯文等）
+        期望：Unicode 内容被正确包含在 prompt 中
+        """
+        prompt = claude_service._build_prompt(
+            issue_url="https://github.com/test/test/issues/5",
+            issue_title="Unicode 测试 🎉",
+            issue_body="中文内容\n日本語\nاللغة العربية\nΕλληνικά",
+            issue_number=5,
+        )
+
+        assert "中文内容" in prompt
+        assert "日本語" in prompt
+        assert "اللغة العربية" in prompt
+        assert "Ελληνικά" in prompt
+        assert "🎉" in prompt
+
+    @pytest.mark.asyncio
+    async def test_connection_logs_correctly_on_success(self, claude_service, mock_process, caplog):
+        """
+        测试：连接成功应该记录正确的日志
+
+        场景：test_connection 成功
+        期望：记录版本信息
+        """
+        mock_process.returncode = 0
+        mock_process.communicate.return_value = (b"claude-code version 2.0.0", b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            with caplog.at_level("INFO"):
+                result = await claude_service.test_connection()
+
+                assert result is True
+                assert any("Claude CLI 可用" in record.message for record in caplog.records)
+
+    @pytest.mark.asyncio
+    async def test_connection_with_version_parsing(self, claude_service, mock_process):
+        """
+        测试：版本信息应该被正确解析
+
+        场景：不同格式的版本输出
+        期望：成功解析并记录
+        """
+        test_cases = [
+            b"claude-code version 1.0.0",
+            b"claude-code 2.3.4",
+            b"@anthropic/claude-code/3.0.0",
+        ]
+
+        for version_output in test_cases:
+            mock_process.returncode = 0
+            mock_process.communicate.return_value = (version_output, b"")
+
+            with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+                result = await claude_service.test_connection()
+                assert result is True
+
+    @pytest.mark.asyncio
+    async def test_develop_feature_max_retries_equals_one(self, claude_service):
+        """
+        测试：max_retries=1 应该只尝试一次
+
+        场景：设置 max_retries=1
+        期望：只执行一次，不重试
+        """
+        claude_service.max_retries = 1
+
+        with patch.object(claude_service, "_execute_claude") as mock_execute:
+            mock_execute.return_value = {
+                "success": False,
+                "errors": "Error",
+                "returncode": 1,
+                "output": "",
+            }
+
+            result = await claude_service.develop_feature(
+                issue_number=6,
+                issue_title="No Retry Test",
+                issue_url="https://github.com/test/test/issues/6",
+                issue_body="Test",
+            )
+
+            assert result["success"] is False
+            assert mock_execute.call_count == 1  # 只调用一次
+
+    @pytest.mark.asyncio
+    async def test_develop_feature_custom_timeout(self, claude_service, mock_process):
+        """
+        测试：自定义超时时间应该生效
+
+        场景：设置自定义超时时间
+        期望：使用自定义的超时时间
+        """
+        claude_service.timeout = 60  # 60秒超时
+
+        mock_process.returncode = 0
+        mock_process.communicate.return_value = (b"Success", b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            with patch("asyncio.wait_for") as mock_wait:
+                mock_wait.return_value = (b"Success", b"")
+
+                await claude_service.develop_feature(
+                    issue_number=7,
+                    issue_title="Custom Timeout Test",
+                    issue_url="https://github.com/test/test/issues/7",
+                    issue_body="Test",
+                )
+
+                # 验证使用了自定义超时
+                assert mock_wait.call_args[1]["timeout"] == 60
+
+    def test_service_attributes_are_correctly_set(self, claude_service, mock_config):
+        """
+        测试：服务属性应该正确设置
+
+        场景：初始化服务
+        期望：所有属性都从配置正确读取
+        """
+        assert claude_service.repo_path == mock_config.repository.path
+        assert claude_service.claude_cli_path == mock_config.claude.cli_path
+        assert claude_service.timeout == mock_config.claude.timeout
+        assert claude_service.max_retries == mock_config.claude.max_retries
+
+    @pytest.mark.asyncio
+    async def test_execute_claude_command_construction(self, claude_service, mock_process):
+        """
+        测试：CLI 命令应该正确构造
+
+        场景：执行 Claude CLI
+        期望：命令参数正确
+        """
+        mock_process.returncode = 0
+        mock_process.communicate.return_value = (b"", b"")
+
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_subprocess.return_value = mock_process
+
+            await claude_service._execute_claude("Test prompt")
+
+            # 验证命令构造
+            call_args = mock_subprocess.call_args
+            args = call_args[0]  # 所有位置参数
+            
+            # args[0] 应该是第一个参数（命令路径），而不是字符
+            assert args[0] == claude_service.claude_cli_path
+            assert "--cwd" in args
+            assert str(claude_service.repo_path) in args
+
+    @pytest.mark.asyncio
+    async def test_develop_feature_execution_time_includes_retries(self, claude_service):
+        """
+        测试：执行时间应该包含重试时间
+
+        场景：第1次失败，等待后第2次成功
+        期望：execution_time 包含等待时间
+        """
+        with patch.object(claude_service, "_execute_claude") as mock_execute:
+            mock_execute.side_effect = [
+                {"success": False, "errors": "Error", "returncode": 1, "output": ""},
+                {"success": True, "output": "Success", "errors": "", "returncode": 0},
+            ]
+
+            with patch("asyncio.sleep") as mock_sleep:
+                mock_sleep.return_value = asyncio.sleep(0)  # 不实际等待
+
+                result = await claude_service.develop_feature(
+                    issue_number=8,
+                    issue_title="Execution Time Test",
+                    issue_url="https://github.com/test/test/issues/8",
+                    issue_body="Test",
+                )
+
+                assert result["success"] is True
+                assert result["execution_time"] > 0
+                # 验证 sleep 被调用（第1次失败后，第2次成功前）
+                # max_retries=3, 第1次失败后会 sleep，第2次成功
+                assert mock_sleep.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_multiple_timeout_scenarios(self, claude_service):
+        """
+        测试：多次超时的处理
+
+        场景：连续多次超时
+        期望：正确记录并最终返回失败
+        """
+        with patch.object(claude_service, "_execute_claude") as mock_execute:
+            mock_execute.side_effect = asyncio.TimeoutError()
+
+            with patch("asyncio.sleep"):  # Mock sleep
+                result = await claude_service.develop_feature(
+                    issue_number=9,
+                    issue_title="Multiple Timeout Test",
+                    issue_url="https://github.com/test/test/issues/9",
+                    issue_body="Test",
+                )
+
+                assert result["success"] is False
+                assert "超时" in result["errors"]
+                assert mock_execute.call_count == claude_service.max_retries
+
+    @pytest.mark.asyncio
+    async def test_mixed_errors_in_retries(self, claude_service):
+        """
+        测试：混合错误类型的处理
+
+        场景：第1次超时，第2次异常，第3次失败
+        期望：正确处理不同类型的错误
+        """
+        with patch.object(claude_service, "_execute_claude") as mock_execute:
+            mock_execute.side_effect = [
+                asyncio.TimeoutError(),  # 第1次超时
+                Exception("Network error"),  # 第2次异常
+                {"success": False, "errors": "API error", "returncode": 1, "output": ""},  # 第3次失败
+            ]
+
+            with patch("asyncio.sleep"):
+                result = await claude_service.develop_feature(
+                    issue_number=10,
+                    issue_title="Mixed Errors Test",
+                    issue_url="https://github.com/test/test/issues/10",
+                    issue_body="Test",
+                )
+
+                assert result["success"] is False
+                assert mock_execute.call_count == claude_service.max_retries

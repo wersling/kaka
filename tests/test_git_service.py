@@ -257,33 +257,43 @@ class TestCreateFeatureBranch:
         mock_config = git_service._mock_config
 
         # Mock 分支创建和切换
-        mock_branch = MagicMock()
-        mock_branch.name = "ai/feature-123-1234567890"
-        mock_repo.create_head.return_value = mock_branch
+        mock_main_branch = MagicMock()
+        mock_new_branch = MagicMock()
 
-        # 动态更新 heads 字典
-        initial_heads = {"main": MagicMock()}
+        # 存储创建的分支名
+        created_branch_name = None
 
-        def get_heads(key):
-            if key == "main":
-                return initial_heads["main"]
-            elif key == mock_branch.name:
-                return mock_branch
-            raise KeyError(key)
+        def mock_create_head(name):
+            nonlocal created_branch_name
+            created_branch_name = name
+            mock_new_branch.name = name
+            return mock_new_branch
+
+        mock_repo.create_head.side_effect = mock_create_head
+
+        # 创建动态的 heads mock
+        mock_heads_dict = {"main": mock_main_branch}
+
+        def get_head(name):
+            if name == "main":
+                return mock_main_branch
+            elif name == created_branch_name:
+                return mock_new_branch
+            raise KeyError(name)
 
         mock_repo.heads = MagicMock()
-        mock_repo.heads.__getitem__ = get_heads
-        mock_repo.heads.__contains__ = lambda self, key: key in ["main", mock_branch.name]
+        mock_repo.heads.__getitem__ = lambda self, name: get_head(name)
+        mock_repo.remotes = {"origin": MagicMock()}
 
         with patch("app.config.get_config", return_value=mock_config):
-            branch_name = git_service.create_feature_branch(issue_number=123)
+            result_branch_name = git_service.create_feature_branch(issue_number=123)
 
             # 验证分支名格式
-            assert branch_name.startswith("ai/feature-123-")
+            assert result_branch_name.startswith("ai/feature-123-")
             # 验证创建了分支
             mock_repo.create_head.assert_called_once()
             # 验证切换到新分支
-            mock_branch.checkout.assert_called_once()
+            mock_new_branch.checkout.assert_called_once()
 
     def test_create_branch_with_custom_base_branch(self, git_service):
         """
@@ -295,16 +305,37 @@ class TestCreateFeatureBranch:
         mock_repo = git_service._mock_repo
         mock_config = git_service._mock_config
 
-        mock_branch = MagicMock()
-        mock_branch.name = "ai/feature-456-1234567890"
-        mock_repo.create_head.return_value = mock_branch
-        mock_repo.heads = {"develop": MagicMock(), mock_branch.name: mock_branch}
+        mock_develop_branch = MagicMock()
+        mock_new_branch = MagicMock()
+
+        created_branch_name = None
+
+        def mock_create_head(name):
+            nonlocal created_branch_name
+            created_branch_name = name
+            mock_new_branch.name = name
+            return mock_new_branch
+
+        mock_repo.create_head.side_effect = mock_create_head
+
+        mock_heads_dict = {"develop": mock_develop_branch}
+
+        def get_head(name):
+            if name == "develop":
+                return mock_develop_branch
+            elif name == created_branch_name:
+                return mock_new_branch
+            raise KeyError(name)
+
+        mock_repo.heads = MagicMock()
+        mock_repo.heads.__getitem__ = lambda self, name: get_head(name)
+        mock_repo.remotes = {"origin": MagicMock()}
 
         with patch("app.config.get_config", return_value=mock_config):
             git_service.create_feature_branch(issue_number=456, base_branch="develop")
 
             # 验证切换到基础分支
-            mock_repo.heads["develop"].checkout.assert_called_once()
+            mock_develop_branch.checkout.assert_called_once()
 
     def test_create_branch_pulls_latest_code(self, git_service):
         """
@@ -316,12 +347,30 @@ class TestCreateFeatureBranch:
         mock_repo = git_service._mock_repo
         mock_config = git_service._mock_config
 
+        mock_main_branch = MagicMock()
+        mock_new_branch = MagicMock()
         mock_origin = MagicMock()
+
+        created_branch_name = None
+
+        def mock_create_head(name):
+            nonlocal created_branch_name
+            created_branch_name = name
+            mock_new_branch.name = name
+            return mock_new_branch
+
+        mock_repo.create_head.side_effect = mock_create_head
+
+        def get_head(name):
+            if name == "main":
+                return mock_main_branch
+            elif name == created_branch_name:
+                return mock_new_branch
+            raise KeyError(name)
+
+        mock_repo.heads = MagicMock()
+        mock_repo.heads.__getitem__ = lambda self, name: get_head(name)
         mock_repo.remotes = {"origin": mock_origin}
-        mock_branch = MagicMock()
-        mock_branch.name = "ai/feature-789-1234567890"
-        mock_repo.create_head.return_value = mock_branch
-        mock_repo.heads = {"main": MagicMock(), mock_branch.name: mock_branch}
 
         with patch("app.config.get_config", return_value=mock_config):
             git_service.create_feature_branch(issue_number=789)
@@ -339,10 +388,29 @@ class TestCreateFeatureBranch:
         mock_repo = git_service._mock_repo
         mock_config = git_service._mock_config
 
+        mock_main_branch = MagicMock()
         mock_new_branch = MagicMock()
-        mock_new_branch.name = "ai/feature-123-1234567890"
-        mock_repo.create_head.return_value = mock_new_branch
-        mock_repo.heads = {"main": MagicMock(), mock_new_branch.name: mock_new_branch}
+
+        created_branch_name = None
+
+        def mock_create_head(name):
+            nonlocal created_branch_name
+            created_branch_name = name
+            mock_new_branch.name = name
+            return mock_new_branch
+
+        mock_repo.create_head.side_effect = mock_create_head
+
+        def get_head(name):
+            if name == "main":
+                return mock_main_branch
+            elif name == created_branch_name:
+                return mock_new_branch
+            raise KeyError(name)
+
+        mock_repo.heads = MagicMock()
+        mock_repo.heads.__getitem__ = lambda self, name: get_head(name)
+        mock_repo.remotes = {"origin": MagicMock()}
 
         with patch("app.config.get_config", return_value=mock_config):
             git_service.create_feature_branch(issue_number=123)
@@ -360,18 +428,34 @@ class TestCreateFeatureBranch:
         mock_repo = git_service._mock_repo
         mock_config = git_service._mock_config
 
-        mock_branch = MagicMock()
-        mock_branch.name = "ai/feature-123-1234567890"
-        mock_repo.create_head.return_value = mock_branch
-        mock_repo.heads = {"main": MagicMock(), mock_branch.name: mock_branch}
+        mock_main_branch = MagicMock()
+        mock_new_branch = MagicMock()
 
         # 固定时间戳
         fixed_timestamp = 1234567890
+
+        def mock_create_head(name):
+            mock_new_branch.name = name
+            return mock_new_branch
+
+        mock_repo.create_head.side_effect = mock_create_head
+
+        def get_head(name):
+            if name == "main":
+                return mock_main_branch
+            elif name == f"ai/feature-123-{fixed_timestamp}":
+                return mock_new_branch
+            raise KeyError(name)
+
+        mock_repo.heads = MagicMock()
+        mock_repo.heads.__getitem__ = lambda self, name: get_head(name)
+        mock_repo.remotes = {"origin": MagicMock()}
+
         with patch("time.time", return_value=fixed_timestamp):
             with patch("app.config.get_config", return_value=mock_config):
-                branch_name = git_service.create_feature_branch(issue_number=123)
+                result_branch_name = git_service.create_feature_branch(issue_number=123)
 
-                assert branch_name == f"ai/feature-123-{fixed_timestamp}"
+                assert result_branch_name == f"ai/feature-123-{fixed_timestamp}"
 
     def test_create_branch_logs_correctly(self, git_service, caplog):
         """
@@ -383,10 +467,29 @@ class TestCreateFeatureBranch:
         mock_repo = git_service._mock_repo
         mock_config = git_service._mock_config
 
-        mock_branch = MagicMock()
-        mock_branch.name = "ai/feature-123-1234567890"
-        mock_repo.create_head.return_value = mock_branch
-        mock_repo.heads = {"main": MagicMock(), mock_branch.name: mock_branch}
+        mock_main_branch = MagicMock()
+        mock_new_branch = MagicMock()
+
+        created_branch_name = None
+
+        def mock_create_head(name):
+            nonlocal created_branch_name
+            created_branch_name = name
+            mock_new_branch.name = name
+            return mock_new_branch
+
+        mock_repo.create_head.side_effect = mock_create_head
+
+        def get_head(name):
+            if name == "main":
+                return mock_main_branch
+            elif name == created_branch_name:
+                return mock_new_branch
+            raise KeyError(name)
+
+        mock_repo.heads = MagicMock()
+        mock_repo.heads.__getitem__ = lambda self, name: get_head(name)
+        mock_repo.remotes = {"origin": MagicMock()}
 
         with patch("app.config.get_config", return_value=mock_config):
             with caplog.at_level("INFO"):
@@ -406,8 +509,44 @@ class TestCreateFeatureBranch:
         mock_repo = git_service._mock_repo
         mock_config = git_service._mock_config
 
-        # Mock 抛出异常
-        mock_repo.heads["main"].checkout.side_effect = git.GitError("Checkout failed")
+        mock_main_branch = MagicMock()
+        mock_main_branch.checkout.side_effect = git.GitError("Checkout failed")
+
+        def get_head(name):
+            if name == "main":
+                return mock_main_branch
+            raise KeyError(name)
+
+        mock_repo.heads = MagicMock()
+        mock_repo.heads.__getitem__ = lambda self, name: get_head(name)
+        mock_repo.remotes = {"origin": MagicMock()}
+
+        with patch("app.config.get_config", return_value=mock_config):
+            with pytest.raises(git.GitError):
+                git_service.create_feature_branch(issue_number=123)
+
+    def test_create_branch_with_pull_failure(self, git_service):
+        """
+        测试：拉取最新代码失败时应该抛出异常
+
+        场景：pull 操作失败
+        期望：抛出异常并记录错误
+        """
+        mock_repo = git_service._mock_repo
+        mock_config = git_service._mock_config
+
+        mock_main_branch = MagicMock()
+        mock_origin = MagicMock()
+        mock_origin.pull.side_effect = git.GitError("Pull failed")
+
+        def get_head(name):
+            if name == "main":
+                return mock_main_branch
+            raise KeyError(name)
+
+        mock_repo.heads = MagicMock()
+        mock_repo.heads.__getitem__ = lambda self, name: get_head(name)
+        mock_repo.remotes = {"origin": mock_origin}
 
         with patch("app.config.get_config", return_value=mock_config):
             with pytest.raises(git.GitError):
@@ -522,6 +661,34 @@ class TestCommitChanges:
 
         # 验证添加了未跟踪的文件
         assert mock_repo.index.add.call_count >= 2
+
+    def test_commit_with_untracked_file_add_failure(self, git_service):
+        """
+        测试：添加未跟踪文件失败时应该忽略并继续
+
+        场景：某些未跟踪文件无法添加
+        期望：忽略错误，继续处理其他文件
+        """
+        mock_repo = git_service._mock_repo
+
+        mock_repo.is_dirty.return_value = False
+        mock_repo.untracked_files = ["good_file.py", "bad_file.py"]
+
+        # Mock add 方法，对 bad_file.py 抛出异常
+        def mock_add_side_effect(files):
+            if "bad_file.py" in str(files):
+                raise Exception("Cannot add file")
+
+        mock_repo.index.add.side_effect = mock_add_side_effect
+        mock_repo.index.diff.return_value = [MagicMock()]
+        mock_commit = MagicMock()
+        mock_commit.hexsha = "xyz789"
+        mock_repo.index.commit.return_value = mock_commit
+
+        # 不应该抛出异常
+        result = git_service.commit_changes(message="Add files", add_all=True)
+        assert result is True
+        mock_repo.index.commit.assert_called_once()
 
     def test_commit_with_correct_message(self, git_service):
         """
@@ -704,16 +871,15 @@ class TestPushToRemote:
 
         mock_remote = MagicMock()
         mock_push_info = MagicMock()
-        # 使用一个非零值来模拟错误标志
+        # ERROR flag in git is (1 << 0) = 1
         mock_push_info.flags = 1
         mock_push_info.summary = "rejected"
         mock_remote.push.return_value = [mock_push_info]
         mock_repo.remotes = {"origin": mock_remote}
 
         with patch("app.config.get_config", return_value=mock_config):
-            with patch("git.remote.ERROR", 1):
-                with pytest.raises(Exception) as exc_info:
-                    git_service.push_to_remote(branch_name="feature")
+            with pytest.raises(Exception) as exc_info:
+                git_service.push_to_remote(branch_name="feature")
 
                 assert "推送失败" in str(exc_info.value)
 
@@ -762,6 +928,41 @@ class TestPushToRemote:
 
                 assert any("推送分支到远程" in record.message for record in caplog.records)
                 assert any("推送成功" in record.message for record in caplog.records)
+
+    def test_push_with_network_error(self, git_service):
+        """
+        测试：网络错误时应该抛出异常
+
+        场景：推送时网络连接失败
+        期望：抛出异常并记录错误
+        """
+        mock_repo = git_service._mock_repo
+        mock_config = git_service._mock_config
+
+        mock_remote = MagicMock()
+        mock_remote.push.side_effect = git.GitCommandError("push", "Network error")
+        mock_repo.remotes = {"origin": mock_remote}
+
+        with patch("app.config.get_config", return_value=mock_config):
+            with pytest.raises(git.GitCommandError):
+                git_service.push_to_remote(branch_name="feature")
+
+    def test_push_with_remote_not_found(self, git_service):
+        """
+        测试：远程仓库不存在时应该抛出异常
+
+        场景：配置的远程名称不存在
+        期望：抛出异常
+        """
+        mock_repo = git_service._mock_repo
+        mock_config = git_service._mock_config
+
+        # 空的 remotes 字典
+        mock_repo.remotes = {}
+
+        with patch("app.config.get_config", return_value=mock_config):
+            with pytest.raises(KeyError):
+                git_service.push_to_remote(branch_name="feature")
 
 
 # =============================================================================
@@ -959,11 +1160,18 @@ class TestGetStatus:
         """
         mock_repo = git_service._mock_repo
 
-        mock_repo.active_branch.side_effect = Exception("Test error")
+        # Mock 返回空字典触发异常日志
+        mock_repo.active_branch.name = "main"
+        mock_repo.is_dirty.return_value = False
+        mock_repo.untracked_files = []
+        mock_repo.index.diff.side_effect = Exception("Diff error")
 
         with caplog.at_level("ERROR"):
-            git_service.get_status()
+            status = git_service.get_status()
 
+            # 应该返回空字典
+            assert status == {}
+            # 应该记录错误日志
             assert any("获取状态失败" in record.message for record in caplog.records)
 
 

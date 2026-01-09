@@ -269,8 +269,11 @@ class WebhookHandler(LoggerMixin):
                         issue_number=issue_number,
                         comment=f"❌ AI 开发失败: {error_msg}",
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    # 通知失败不应阻塞主流程，但需要记录日志
+                    self.logger.warning(
+                        f"向 Issue #{issue_number} 发送失败通知失败: {e}"
+                    )
 
                 return TaskResult(
                     success=False,
@@ -344,8 +347,11 @@ class WebhookHandler(LoggerMixin):
                         issue_number=issue_number,
                         comment=f"❌ AI 开发流程异常: {str(e)}",
                     )
-            except Exception:
-                pass
+            except Exception as notify_error:
+                # 通知失败不应阻塞主流程，但需要记录日志
+                self.logger.warning(
+                    f"向 Issue #{issue_number} 发送异常通知失败: {notify_error}"
+                )
 
             return TaskResult(
                 success=False,
