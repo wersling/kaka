@@ -263,16 +263,14 @@ class WebhookHandler(LoggerMixin):
                 error_msg = claude_result.get("errors", "Unknown error")
                 self.logger.error(f"Claude 开发失败: {error_msg}")
 
-                # 通知用户失败
-                try:
-                    self.github_service.add_comment_to_issue(
-                        issue_number=issue_number,
-                        comment=f"❌ AI 开发失败: {error_msg}",
-                    )
-                except Exception as e:
-                    # 通知失败不应阻塞主流程，但需要记录日志
+                # 通知用户失败（非阻塞）
+                success = self.github_service.add_comment_to_issue(
+                    issue_number=issue_number,
+                    comment=f"❌ AI 开发失败: {error_msg}",
+                )
+                if not success:
                     self.logger.warning(
-                        f"向 Issue #{issue_number} 发送失败通知失败: {e}"
+                        f"向 Issue #{issue_number} 发送失败通知失败"
                     )
 
                 return TaskResult(
@@ -318,12 +316,16 @@ class WebhookHandler(LoggerMixin):
                 f"✅ PR 创建成功: #{pr_info['pr_number']} - {pr_info['html_url']}"
             )
 
-            # 在 Issue 中评论 PR 链接
-            self.github_service.add_comment_to_issue(
+            # 在 Issue 中评论 PR 链接（非阻塞）
+            success = self.github_service.add_comment_to_issue(
                 issue_number=issue_number,
                 comment=f"✅ AI 开发完成！已创建 PR: #{pr_info['pr_number']}\n\n"
                 f"PR URL: {pr_info['html_url']}",
             )
+            if not success:
+                self.logger.warning(
+                    f"向 Issue #{issue_number} 发送 PR 链接失败"
+                )
 
             # 返回成功结果
             return TaskResult(
@@ -340,18 +342,16 @@ class WebhookHandler(LoggerMixin):
         except Exception as e:
             self.logger.error(f"AI 开发流程失败: {e}", exc_info=True)
 
-            # 尝试通知用户
-            try:
-                if self.github_service:
-                    self.github_service.add_comment_to_issue(
-                        issue_number=issue_number,
-                        comment=f"❌ AI 开发流程异常: {str(e)}",
-                    )
-            except Exception as notify_error:
-                # 通知失败不应阻塞主流程，但需要记录日志
-                self.logger.warning(
-                    f"向 Issue #{issue_number} 发送异常通知失败: {notify_error}"
+            # 尝试通知用户（非阻塞）
+            if self.github_service:
+                success = self.github_service.add_comment_to_issue(
+                    issue_number=issue_number,
+                    comment=f"❌ AI 开发流程异常: {str(e)}",
                 )
+                if not success:
+                    self.logger.warning(
+                        f"向 Issue #{issue_number} 发送异常通知失败"
+                    )
 
             return TaskResult(
                 success=False,

@@ -114,15 +114,15 @@ async def check_claude_cli() -> ServiceCheck:
     try:
         import shutil
 
-        # 尝试查找 claude 命令（新版）或 claude-code（旧版）
-        claude_path = shutil.which("claude") or shutil.which("claude-code")
+        # 查找 claude 命令
+        claude_path = shutil.which("claude")
 
         if not claude_path:
             return ServiceCheck(
                 healthy=False,
                 message="Claude Code CLI 未安装",
                 details={
-                    "安装命令": "npm install -g @anthropic-ai/claude-code"
+                    "提示": "请确保 Claude Code CLI 已正确安装并添加到 PATH"
                 },
             )
 

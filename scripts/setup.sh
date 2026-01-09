@@ -136,17 +136,12 @@ fi
 # 检查 Claude Code CLI
 echo ""
 echo "🔍 检查 Claude Code CLI..."
-# 同时检查 claude 和 claude-code 命令
 if command -v claude &> /dev/null; then
     CLAUDE_VERSION=$(claude --version 2>&1 || echo "已安装")
     echo -e "${GREEN}✅ Claude Code CLI: ${CLAUDE_VERSION}${NC}"
-elif command -v claude-code &> /dev/null; then
-    CLAUDE_VERSION=$(claude-code --version 2>&1 || echo "已安装")
-    echo -e "${GREEN}✅ Claude Code CLI: ${CLAUDE_VERSION}${NC}"
 else
     echo -e "${YELLOW}⚠️  未找到 Claude Code CLI${NC}"
-    echo "请使用以下命令安装："
-    echo "  npm install -g @anthropic-ai/claude-code"
+    echo "请确保 Claude Code CLI 已正确安装并添加到 PATH"
 fi
 
 # 设置脚本权限

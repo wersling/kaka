@@ -74,8 +74,9 @@ class ClaudeConfig(BaseModel):
     timeout: int = 1800  # 30 分钟
     max_retries: int = 2
     auto_test: bool = True
-    cli_path: str = "claude-code"
+    cli_path: str = "claude"
     cwd: Optional[Path] = None
+    dangerously_skip_permissions: bool = True  # 跳过权限检查
 
     @field_validator("cwd", mode="before")
     @classmethod

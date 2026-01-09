@@ -1,4 +1,4 @@
-.PHONY: help install dev webhook-test test lint format clean coverage docker-build docker-run init
+.PHONY: help install dev webhook-test test lint format clean coverage docker-build docker-run init test-webhook-live trigger test-webhook-status test-webhook-batch
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -284,3 +284,116 @@ perf-memory:
 	@echo "检测内存泄漏..."
 	python -m pytest tests/test_performance.py::TestStressTesting::test_memory_leak_detection \
 		-v -s --benchmark-skip
+
+# 真实环境 Webhook 测试
+.PHONY: test-webhook-live
+
+# GitHub 仓库配置
+GITHUB_OWNER ?= wersling
+GITHUB_REPO ?= kaka_test
+ISSUE_NUMBER ?= 1
+TEST_LABEL ?= ai-dev
+
+# 触发 Webhook（通过重新添加标签）
+test-webhook-live: ## 触发真实环境的 Webhook 测试（对 GitHub Issue 添加/删除 ai-dev 标签）
+	@echo "$(BLUE)🚀 触发真实环境 Webhook 测试...$(NC)"
+	@echo "$(BLUE)📋 目标: $(GITHUB_OWNER)/$(GITHUB_REPO)#$(ISSUE_NUMBER)$(NC)"
+	@echo ""
+	@if ! command -v gh > /dev/null 2>&1; then \
+		echo "$(YELLOW)❌ GitHub CLI 未安装$(NC)"; \
+		echo "$(YELLOW)   macOS: brew install gh$(NC)"; \
+		echo "$(YELLOW)   Linux: https://github.com/cli/cli$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)🔍 检查认证状态...$(NC)"
+	@gh auth status > /dev/null 2>&1 || { \
+		echo "$(YELLOW)❌ GitHub CLI 未认证$(NC)"; \
+		echo "$(YELLOW)   请运行: gh auth login$(NC)"; \
+		exit 1; \
+	}
+	@echo "$(GREEN)✅ GitHub CLI 已认证$(NC)"
+	@echo ""
+	@echo "$(BLUE)🏷️  处理标签 '$(TEST_LABEL)'...$(NC)"
+	@echo "$(YELLOW)   删除旧标签（如果存在）...$(NC)"
+	@GH_TOKEN=$$(grep "^GITHUB_TOKEN=" .env 2>/dev/null | cut -d'=' -f2-) \
+		gh issue edit $(ISSUE_NUMBER) \
+		--repo $(GITHUB_OWNER)/$(GITHUB_REPO) \
+		--remove-label $(TEST_LABEL) 2>/dev/null || echo "     标签不存在，跳过删除"
+	@sleep 1
+	@echo "$(GREEN)   ✅ 添加标签 '$(TEST_LABEL)'...$(NC)"
+	@GH_TOKEN=$$(grep "^GITHUB_TOKEN=" .env 2>/dev/null | cut -d'=' -f2-) \
+		gh issue edit $(ISSUE_NUMBER) \
+		--repo $(GITHUB_OWNER)/$(GITHUB_REPO) \
+		--add-label $(TEST_LABEL)
+	@echo ""
+	@echo "$(GREEN)✅ Webhook 触发成功！$(NC)"
+	@echo "$(BLUE)📊 查看 Issue:$(NC)"
+	@echo "   https://github.com/$(GITHUB_OWNER)/$(GITHUB_REPO)/issues/$(ISSUE_NUMBER)"
+	@echo ""
+	@echo "$(BLUE)💡 提示:$(NC)"
+	@echo "   使用 'make logs' 或 'make logs-recent' 查看服务日志"
+	@echo "   使用 'make logs-error' 查看错误日志"
+
+# 快速触发 Webhook（别名）
+trigger: test-webhook-live ## 触发 Webhook 的快捷命令
+
+# 使用 curl 直接调用 GitHub API（备用方案）
+trigger-api: ## 使用 curl 直接调用 GitHub API 添加标签（需要 .env 中的 GITHUB_TOKEN 有足够权限）
+	@echo "$(BLUE)🚀 通过 API 触发 Webhook...$(NC)"
+	@echo "$(BLUE)📋 目标: $(GITHUB_OWNER)/$(GITHUB_REPO)#$(ISSUE_NUMBER)$(NC)"
+	@echo ""
+	@if [ ! -f .env ]; then \
+		echo "$(YELLOW)❌ .env 文件不存在$(NC)"; \
+		exit 1; \
+	fi
+	@GITHUB_TOKEN=$$(grep "^GITHUB_TOKEN=" .env | cut -d'=' -f2-); \
+	if [ -z "$$GITHUB_TOKEN" ]; then \
+		echo "$(YELLOW)❌ GITHUB_TOKEN 未设置$(NC)"; \
+		exit 1; \
+	fi; \
+	echo "$(BLUE)🏷️  处理标签 '$(TEST_LABEL)'...$(NC)"; \
+	echo "$(YELLOW)   获取当前标签...$(NC)"; \
+	LABELS=$$(curl -s -H "Authorization: token $$GITHUB_TOKEN" \
+		-H "Accept: application/vnd.github.v3+json" \
+		"https://api.github.com/repos/$(GITHUB_OWNER)/$(GITHUB_REPO)/issues/$(ISSUE_NUMBER)" \
+		| jq -r '.labels | map(.name) | join(",")'); \
+	echo "     当前标签: $$LABELS"; \
+	echo "$(YELLOW)   删除旧标签（如果存在）...$(NC)"; \
+	curl -s -X DELETE \
+		-H "Authorization: token $$GITHUB_TOKEN" \
+		-H "Accept: application/vnd.github.v3+json" \
+		"https://api.github.com/repos/$(GITHUB_OWNER)/$(GITHUB_REPO)/issues/$(ISSUE_NUMBER)/labels/$(TEST_LABEL)" \
+		> /dev/null 2>&1 || echo "     标签不存在，跳过删除"; \
+	sleep 1; \
+	echo "$(GREEN)   ✅ 添加标签 '$(TEST_LABEL)'...$(NC)"; \
+	curl -s -X POST \
+		-H "Authorization: token $$GITHUB_TOKEN" \
+		-H "Accept: application/vnd.github.v3+json" \
+		"https://api.github.com/repos/$(GITHUB_OWNER)/$(GITHUB_REPO)/issues/$(ISSUE_NUMBER)/labels" \
+		-d '{"labels":["$(TEST_LABEL)"]}' \
+		| jq -r '.[] | "     添加成功: " + .name'; \
+	echo ""; \
+	echo "$(GREEN)✅ Webhook 触发成功！$(NC)"; \
+	echo "$(BLUE)📊 查看 Issue:$(NC)"; \
+	echo "   https://github.com/$(GITHUB_OWNER)/$(GITHUB_REPO)/issues/$(ISSUE_NUMBER)"
+
+# 查看测试 Issue 状态
+test-webhook-status: ## 查看测试 Issue 的标签状态
+	@echo "$(BLUE)📋 Issue #$(ISSUE_NUMBER) 标签状态:$(NC)"
+	@gh issue view $(ISSUE_NUMBER) \
+		--repo $(GITHUB_OWNER)/$(GITHUB_REPO) \
+		--json title,labels,state,url \
+		--jq '"标题: " + .title + "\n状态: " + .state + "\n标签: " + ([.labels[].name] | join(", ")) + "\n链接: " + .url'
+
+# 批量触发 Webhook（多次测试）
+test-webhook-batch: ## 批量触发 Webhook（使用: make test-webhook-batch COUNT=3）
+	@echo "$(BLUE)🔄 批量触发 Webhook ($(COUNT) 次)...$(NC)"
+	@for i in $$(seq 1 $(COUNT)); do \
+		echo "$(BLUE)第 $$i 次触发...$(NC)"; \
+		$(MAKE) test-webhook-live; \
+		if [ $$i -lt $(COUNT) ]; then \
+			echo "$(YELLOW)⏳ 等待 3 秒...$(NC)"; \
+			sleep 3; \
+		fi; \
+	done
+	@echo "$(GREEN)✅ 批量触发完成！$(NC)"

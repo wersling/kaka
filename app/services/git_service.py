@@ -84,11 +84,71 @@ class GitService(LoggerMixin):
                 f"创建特性分支: {branch_name} (基于 {default_branch})"
             )
 
-            # 确保在默认分支
-            self.repo.heads[default_branch].checkout()
+            # 获取远程
+            origin = self.repo.remotes[remote_name]
+
+            # 检查本地是否存在默认分支
+            local_branch_exists = default_branch in [h.name for h in self.repo.heads]
+
+            if not local_branch_exists:
+                self.logger.warning(
+                    f"本地分支 '{default_branch}' 不存在，尝试从远程创建"
+                )
+                # 尝试从远程获取并创建本地分支
+                try:
+                    # 获取远程的所有分支
+                    remote_refs = origin.refs
+                    remote_default_branch = f"{remote_name}/{default_branch}"
+
+                    if remote_default_branch in [r.name for r in remote_refs]:
+                        # 从远程创建本地分支
+                        self.logger.info(f"从远程创建本地分支: {default_branch}")
+                        remote_ref = origin.refs[default_branch]
+                        local_branch = self.repo.create_head(
+                            default_branch, remote_ref
+                        )
+                        local_branch.set_tracking_branch(remote_ref)
+                        local_branch.checkout()
+                    else:
+                        # 尝试使用远程的默认分支
+                        self.logger.warning(
+                            f"远程分支 '{default_branch}' 不存在，尝试获取远程默认分支"
+                        )
+                        # 获取远程仓库的默认分支
+                        origin.fetch()
+                        # 检查远程有哪些分支
+                        available_branches = [
+                            r.name.replace(f"{remote_name}/", "")
+                            for r in remote_refs
+                            if r.name.startswith(f"{remote_name}/")
+                        ]
+                        if available_branches:
+                            # 使用第一个可用的分支
+                            actual_default = available_branches[0]
+                            self.logger.info(
+                                f"使用远程分支 '{actual_default}' 作为默认分支"
+                            )
+                            remote_ref = origin.refs[actual_default]
+                            local_branch = self.repo.create_head(
+                                actual_default, remote_ref
+                            )
+                            local_branch.set_tracking_branch(remote_ref)
+                            local_branch.checkout()
+                            default_branch = actual_default
+                        else:
+                            raise Exception(
+                                f"远程仓库没有任何可用的分支。请确保远程仓库已正确初始化。"
+                            )
+                except Exception as e:
+                    raise Exception(
+                        f"无法从远程创建本地分支: {e}。"
+                        f"请确保远程仓库存在且可访问。"
+                    ) from e
+            else:
+                # 确保在默认分支
+                self.repo.heads[default_branch].checkout()
 
             # 拉取最新代码
-            origin = self.repo.remotes[remote_name]
             self.logger.info(f"拉取最新代码: {default_branch}")
             origin.pull(default_branch)
 

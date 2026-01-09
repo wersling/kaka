@@ -41,12 +41,14 @@ class ClaudeService(LoggerMixin):
         self.claude_cli_path = claude_cli_path or config.claude.cli_path
         self.timeout = config.claude.timeout
         self.max_retries = config.claude.max_retries
+        self.dangerously_skip_permissions = config.claude.dangerously_skip_permissions
 
         self.logger.info(
             f"Claude 服务初始化: "
             f"CLI={self.claude_cli_path}, "
             f"超时={self.timeout}s, "
-            f"重试={self.max_retries}"
+            f"重试={self.max_retries}, "
+            f"跳过权限检查={self.dangerously_skip_permissions}"
         )
 
     def _build_prompt(
@@ -223,12 +225,16 @@ Issue 内容:
             # 构建命令
             cmd = [
                 self.claude_cli_path,
-                "--cwd", str(self.repo_path),
             ]
 
+            # 如果配置了跳过权限检查，添加参数
+            if self.dangerously_skip_permissions:
+                cmd.append("--dangerously-skip-permissions")
+                self.logger.debug("已启用 --dangerously-skip-permissions 模式")
+
             # 如果有 prompt 文件，添加到命令
-            # 注意：claude-code 可能需要特定的参数格式
-            # 这里假设它接受文件路径或从 stdin 读取
+            # 注意：工作目录通过 subprocess 的 cwd 参数设置
+            # 这里假设 claude CLI 接受从 stdin 读取
 
             self.logger.debug(f"执行命令: {' '.join(cmd)}")
 
@@ -277,7 +283,7 @@ Issue 内容:
         except FileNotFoundError:
             error_msg = (
                 f"Claude CLI 未找到: {self.claude_cli_path}. "
-                f"请使用 'npm install -g @anthropic/claude-code' 安装"
+                f"请确保 Claude Code CLI 已正确安装并添加到 PATH"
             )
             self.logger.error(error_msg)
             raise Exception(error_msg)

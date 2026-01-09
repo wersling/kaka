@@ -40,9 +40,11 @@ class GitHubService(LoggerMixin):
         # 测试连接
         try:
             user = self.github.get_user()
+            rate_limit = self.github.get_rate_limit()
+            core_rate = rate_limit.resources.core
             self.logger.info(
                 f"GitHub API 连接成功: {user.login} "
-                f"(限额: {user.rate_limiting_remaining_hits} 剩余)"
+                f"(限额: {core_rate.remaining}/{core_rate.limit} 剩余)"
             )
         except Exception as e:
             self.logger.error(f"GitHub API 连接失败: {e}", exc_info=True)
@@ -177,13 +179,16 @@ class GitHubService(LoggerMixin):
         self,
         issue_number: int,
         comment: str,
-    ) -> None:
+    ) -> bool:
         """
         在 Issue 添加评论
 
         Args:
             issue_number: Issue 编号
             comment: 评论内容
+
+        Returns:
+            bool: 是否成功添加评论
         """
         try:
             repo = self._get_repo()
@@ -192,13 +197,29 @@ class GitHubService(LoggerMixin):
             issue.create_comment(comment)
 
             self.logger.info(f"✅ 已在 Issue #{issue_number} 添加评论")
+            return True
 
         except GithubException as e:
-            self.logger.error(
-                f"添加评论失败 (Issue #{issue_number}): {e}",
-                exc_info=True,
-            )
-            raise
+            # 检查是否是权限问题
+            if e.status == 403:
+                self.logger.error(
+                    f"❌ GitHub Token 权限不足 (Issue #{issue_number})\n"
+                    f"错误: {e.data.get('message', '未知错误')}\n"
+                    f"解决方法:\n"
+                    f"  1. 前往 https://github.com/settings/tokens\n"
+                    f"  2. 编辑或生成新的 Personal Access Token\n"
+                    f"  3. 确保授予以下权限:\n"
+                    f"     - repo (完整仓库访问权限)\n"
+                    f"     - public_repo (如果是公开仓库)\n"
+                    f"  4. 更新 .env 文件中的 GITHUB_TOKEN",
+                    exc_info=False,
+                )
+            else:
+                self.logger.error(
+                    f"添加评论失败 (Issue #{issue_number}): {e}",
+                    exc_info=True,
+                )
+            return False
 
     def add_comment_to_pr(
         self,
@@ -340,7 +361,7 @@ class GitHubService(LoggerMixin):
         """
         try:
             limits = self.github.get_rate_limit()
-            core = limits.core
+            core = limits.resources.core
 
             return {
                 "remaining": core.remaining,
