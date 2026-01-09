@@ -5,8 +5,12 @@ AI 开发调度服务 - FastAPI 应用入口
 """
 
 import json
+import logging
+import sys
 import time
 from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response, status
@@ -16,11 +20,105 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
-from app.config import init_config, Config
+from app.config import init_config, get_config, Config
 from app.utils.logger import get_logger, setup_from_config
 
-# 初始化日志
+# 初始化一个临时日志（后续会被正式配置替换）
 logger = get_logger(__name__)
+
+
+def setup_logging() -> logging.Logger:
+    """
+    设置日志系统
+
+    在应用启动前调用，确保所有日志都能正确输出到文件
+    包括应用日志、Uvicorn 访问日志和所有 traceback
+
+    Returns:
+        logging.Logger: 配置好的日志记录器
+    """
+    global logger
+
+    try:
+        # 初始化配置
+        config = init_config()
+
+        # 确保 logs 目录存在
+        log_file = Path(config.logging.file)
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # 创建文件处理器（用于所有日志）
+        file_handler = RotatingFileHandler(
+            config.logging.file,
+            maxBytes=config.logging.max_bytes,
+            backupCount=config.logging.backup_count,
+            encoding="utf-8",
+        )
+        file_handler.setLevel(logging.DEBUG)  # 捕获所有级别的日志
+        file_formatter = logging.Formatter(config.logging.format)
+        file_handler.setFormatter(file_formatter)
+
+        # 创建控制台处理器
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(getattr(logging, config.logging.level.upper()))
+        console_formatter = logging.Formatter(config.logging.format)
+        console_handler.setFormatter(console_formatter)
+
+        # 配置根日志记录器（捕获所有日志，包括 Uvicorn）
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)  # 设置为 DEBUG 以捕获所有日志
+
+        # 清除根记录器的现有处理器
+        root_logger.handlers.clear()
+
+        # 添加处理器到根记录器
+        root_logger.addHandler(file_handler)
+        root_logger.addHandler(console_handler)
+
+        # 设置应用特定的日志记录器
+        logger_instance = setup_from_config(config)
+
+        # 更新全局 logger
+        logger = logger_instance
+
+        # 同时更新模块级别的 logger
+        this_module = sys.modules[__name__]
+        this_module.logger = logger_instance
+
+        # 配置 Uvicorn 日志记录器
+        uvicorn_loggers = [
+            "uvicorn",
+            "uvicorn.access",
+            "uvicorn.error",
+        ]
+
+        for uvicorn_logger_name in uvicorn_loggers:
+            uvicorn_logger = logging.getLogger(uvicorn_logger_name)
+            uvicorn_logger.setLevel(logging.INFO)
+            uvicorn_logger.handlers.clear()
+            uvicorn_logger.propagate = True  # 传播到根记录器
+
+        return logger_instance
+
+    except Exception as e:
+        # 如果配置加载失败，使用默认配置
+        # 确保 logs 目录存在
+        Path("logs").mkdir(parents=True, exist_ok=True)
+
+        # 创建基本的日志配置
+        logging.basicConfig(
+            level=logging.DEBUG,  # 捕获所有日志
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[
+                logging.FileHandler("logs/ai-scheduler.log", encoding="utf-8"),
+                logging.StreamHandler()
+            ],
+            force=True  # 强制重新配置
+        )
+
+        logger = logging.getLogger(__name__)
+        logger.warning(f"使用默认日志配置，配置加载失败: {e}")
+        return logger
 
 
 class TimingMiddleware(BaseHTTPMiddleware):
@@ -61,33 +159,25 @@ async def lifespan(app: FastAPI):
     启动时初始化配置和日志
     关闭时清理资源
     """
+    # 获取配置（日志已在模块加载时设置）
+    config = get_config()
+
     # 启动时执行
     logger.info("=" * 60)
     logger.info("🚀 AI 开发调度服务启动中...")
     logger.info("=" * 60)
+    logger.info(f"✅ 配置加载成功")
+    logger.info(f"✅ 日志系统初始化完成 (级别: {config.logging.level})")
 
-    try:
-        # 初始化配置
-        config = init_config()
-        logger.info("✅ 配置加载成功")
+    # 记录配置信息
+    logger.info(f"📋 仓库: {config.github.repo_full_name}")
+    logger.info(f"📂 本地路径: {config.repository.path}")
+    logger.info(f"🏷️  触发标签: {config.github.trigger_label}")
+    logger.info(f"💬 触发命令: {config.github.trigger_command}")
 
-        # 设置日志
-        logger_instance = setup_from_config(config)
-        logger.info(f"✅ 日志系统初始化完成 (级别: {config.logging.level})")
-
-        # 记录配置信息
-        logger.info(f"📋 仓库: {config.github.repo_full_name}")
-        logger.info(f"📂 本地路径: {config.repository.path}")
-        logger.info(f"🏷️  触发标签: {config.github.trigger_label}")
-        logger.info(f"💬 触发命令: {config.github.trigger_command}")
-
-        logger.info("=" * 60)
-        logger.info("✅ 服务启动完成")
-        logger.info("=" * 60)
-
-    except Exception as e:
-        logger.error(f"❌ 服务启动失败: {e}", exc_info=True)
-        raise
+    logger.info("=" * 60)
+    logger.info("✅ 服务启动完成")
+    logger.info("=" * 60)
 
     yield
 
@@ -95,6 +185,9 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 服务关闭中...")
     logger.info("✅ 服务已关闭")
 
+
+# 在创建应用前设置日志系统
+setup_logging()
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -216,6 +309,21 @@ async def root() -> dict[str, str]:
 
 
 # Webhook 端点
+@app.get("/webhook/github", tags=["Webhook"])
+async def github_webhook_get() -> dict[str, str]:
+    """
+    GitHub Webhook 验证端点（GET）
+
+    GitHub 在创建 Webhook 时会发送 GET 请求验证 URL。
+    返回 200 以通过验证。
+    """
+    return {
+        "message": "Webhook endpoint is ready",
+        "method": "POST",
+        "content_type": "application/json",
+    }
+
+
 @app.post("/webhook/github", tags=["Webhook"])
 async def github_webhook(
     request: Request,
@@ -224,7 +332,7 @@ async def github_webhook(
     x_github_delivery: str | None = Header(None, alias="X-GitHub-Delivery"),
 ) -> dict[str, Any]:
     """
-    GitHub Webhook 接收端点
+    GitHub Webhook 接收端点（POST）
 
     接收 GitHub 事件并触发 AI 开发流程
     """

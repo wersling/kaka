@@ -1,4 +1,4 @@
-.PHONY: help install dev test lint format clean coverage docker-build docker-run init
+.PHONY: help install dev webhook-test test lint format clean coverage docker-build docker-run init
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -41,6 +41,30 @@ update: ## 更新依赖到最新版本
 dev: ## 启动开发服务器
 	@echo "$(BLUE)🚀 启动开发服务器...$(NC)"
 	@./scripts/dev.sh
+
+## 🌐 启动 Webhook 测试环境（ngrok）
+webhook-test: ## 启动本地 Webhook 测试环境（需要 ngrok）
+	@echo "$(BLUE)🌐 启动 Webhook 测试环境...$(NC)"
+	@if ! command -v ngrok > /dev/null 2>&1; then \
+		echo "$(YELLOW)❌ ngrok 未安装$(NC)"; \
+		echo "$(YELLOW)   macOS: brew install ngrok$(NC)"; \
+		echo "$(YELLOW)   Linux: 访问 https://ngrok.com/download$(NC)"; \
+		exit 1; \
+	fi
+	@if [ ! -f .env ]; then \
+		echo "$(YELLOW)❌ .env 文件不存在$(NC)"; \
+		echo "$(YELLOW)   请先运行: cp .env.example .env$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)📡 启动 FastAPI 服务（后台）...$(NC)"
+	@./scripts/dev.sh & \
+	SERVER_PID=$$!; \
+	sleep 3; \
+	echo "$(GREEN)🌐 启动 ngrok 隧道...$(NC)"; \
+	ngrok http 8000 & \
+	NGROK_PID=$$!; \
+	trap "kill $$SERVER_PID $$NGROK_PID 2>/dev/null; echo ''; echo '$(YELLOW)🛑 服务已停止$(NC)'; exit 0" INT; \
+	wait
 
 ## 🧪 运行测试
 test: ## 运行所有测试

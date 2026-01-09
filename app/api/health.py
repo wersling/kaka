@@ -114,21 +114,35 @@ async def check_claude_cli() -> ServiceCheck:
     try:
         import shutil
 
-        claude_path = shutil.which("claude-code")
+        # 尝试查找 claude 命令（新版）或 claude-code（旧版）
+        claude_path = shutil.which("claude") or shutil.which("claude-code")
 
         if not claude_path:
             return ServiceCheck(
                 healthy=False,
                 message="Claude Code CLI 未安装",
                 details={
-                    "安装命令": "npm install -g @anthropic/claude-code"
+                    "安装命令": "npm install -g @anthropic-ai/claude-code"
                 },
             )
+
+        # 尝试获取版本信息
+        try:
+            import subprocess
+            result = subprocess.run(
+                [claude_path, "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            version = result.stdout.strip() if result.returncode == 0 else "unknown"
+        except Exception:
+            version = "unknown"
 
         return ServiceCheck(
             healthy=True,
             message="Claude Code CLI 已安装",
-            details={"path": claude_path},
+            details={"path": claude_path, "version": version},
         )
     except Exception as e:
         logger.error(f"Claude CLI 检查失败: {e}")

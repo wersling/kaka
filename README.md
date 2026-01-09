@@ -20,6 +20,7 @@
 - [配置说明](#-配置说明)
 - [使用指南](#-使用指南)
 - [开发指南](#-开发指南)
+  - [本地 Webhook 测试](#-本地-webhook-测试)
 - [API 文档](#-api-文档)
 - [部署指南](#-部署指南)
 - [故障排查](#-故障排查)
@@ -667,6 +668,288 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 # 方式 3: 运行主模块
 python -m app.main
 ```
+
+### 本地 Webhook 测试
+
+在生产环境中，GitHub Webhook 需要一个公网 URL。本地开发时，我们使用 **ngrok** 创建一个安全的隧道。
+
+#### 什么是 ngrok？
+
+ngrok 是一个反向代理，可以将本地端口暴露到公网，无需配置路由器或防火墙。
+
+#### 安装 ngrok
+
+```bash
+# macOS
+brew install ngrok
+
+# Linux
+curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+sudo apt update && sudo apt install ngrok
+
+# 或访问 https://ngrok.com/download 下载
+```
+
+#### 配置 ngrok（首次使用）
+
+```bash
+# 1. 注册 ngrok 账户
+# 访问 https://ngrok.com/signup
+
+# 2. 获取 authtoken
+# 访问 https://dashboard.ngrok.com/get-started/your-authtoken
+
+# 3. 配置 authtoken
+ngrok config add-authtoken YOUR_NGROK_AUTH_TOKEN
+```
+
+#### 本地测试流程
+
+**步骤 1: 启动 FastAPI 服务**
+
+```bash
+# 终端 1: 启动开发服务器
+./scripts/dev.sh
+
+# 或使用 Makefile
+make dev
+
+# 输出示例：
+# INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+```
+
+**步骤 2: 启动 ngrok 隧道**
+
+```bash
+# 终端 2: 启动 ngrok
+ngrok http 8000
+
+# 输出示例：
+# ngrok by @inconshreveable
+# Session Status                online
+# Forwarding    https://abc123.ngrok-free.app -> http://localhost:8000
+#               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#               记住这个 URL！
+# Web Interface                 http://127.0.0.1:4040
+```
+
+**步骤 3: 配置 GitHub Webhook**
+
+1. 访问你的 GitHub 仓库设置页面
+   ```
+   https://github.com/your-username/your-repo/settings/hooks
+   ```
+
+2. 点击 "Add webhook"
+
+3. 填写配置：
+   ```
+   Payload URL: https://abc123.ngrok-free.app/webhook/github
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               替换为你的 ngrok URL
+
+   Content type: application/json
+
+   Secret: (你生成的 GITHUB_WEBHOOK_SECRET)
+
+   Which events would you like to trigger this webhook?
+   ✅ Let me select individual events
+   ✅ Issues
+   ✅ Issue comments
+   ```
+
+4. 点击 "Add webhook"
+
+**步骤 4: 测试 Webhook**
+
+```bash
+# 在 GitHub Issue 中添加 "ai-dev" 标签
+# 或在 Issue 中评论 "/ai develop"
+
+# 查看终端 1 的日志输出
+# 应该看到类似：
+# INFO:     10.0.0.1:54321 - "POST /webhook/github HTTP/1.1" 202 Accepted
+# INFO:     app.services.webhook_handler - 收到 GitHub event: issues
+# INFO:     app.services.webhook_handler - 触发条件满足，开始 AI 开发
+```
+
+**步骤 5: 查看 ngrok 请求详情**
+
+```bash
+# 访问 ngrok Web 界面
+open http://127.0.0.1:4040
+
+# 你可以看到：
+# - 所有传入请求
+# - 请求头、请求体
+# - 响应状态
+# - 响应时间
+```
+
+#### 一键启动脚本
+
+创建 `scripts/test-webhook.sh` 用于快速启动：
+
+```bash
+#!/bin/bash
+
+echo "🚀 启动本地 Webhook 测试环境..."
+
+# 检查 ngrok
+if ! command -v ngrok &> /dev/null; then
+    echo "❌ ngrok 未安装"
+    echo "   macOS: brew install ngrok"
+    echo "   Linux: 访问 https://ngrok.com/download"
+    exit 1
+fi
+
+# 检查 .env
+if [ ! -f .env ]; then
+    echo "❌ .env 文件不存在"
+    echo "   请先运行: cp .env.example .env"
+    exit 1
+fi
+
+# 启动服务
+echo "📡 启动 FastAPI 服务..."
+./scripts/dev.sh &
+SERVER_PID=$!
+sleep 3
+
+# 启动 ngrok
+echo "🌐 启动 ngrok 隧道..."
+ngrok http 8000 &
+NGROK_PID=$!
+
+echo ""
+echo "✅ 服务已启动！"
+echo ""
+echo "📝 下一步："
+echo "   1. 复制上面的 ngrok URL"
+echo "   2. 在 GitHub Webhook 设置中添加: https://xxx.ngrok-free.app/webhook/github"
+echo "   3. 访问 ngrok Web 界面: http://127.0.0.1:4040"
+echo ""
+echo "⚠️  按 Ctrl+C 停止所有服务"
+
+trap "kill $SERVER_PID $NGROK_PID 2>/dev/null; echo ''; echo '🛑 服务已停止'; exit 0" INT
+
+wait
+```
+
+使用方法：
+
+```bash
+chmod +x scripts/test-webhook.sh
+./scripts/test-webhook.sh
+```
+
+#### 调试技巧
+
+**查看 Webhook 签名验证**
+
+```bash
+# 查看最近的 Webhook 交付
+# 在 GitHub Webhook 页面点击 "Recent Deliveries"
+
+# 点击具体的交付查看详情：
+# - Request headers
+# - Request payload
+# - Response status
+# - Response body
+```
+
+**重新发送 Webhook**
+
+```bash
+# 在 GitHub Webhook 页面
+# 1. 找到最近的交付
+# 2. 点击 "Redeliver" 按钮
+# 3. 确认重新发送
+```
+
+**手动测试 Webhook**
+
+```bash
+# 使用 curl 发送测试请求
+WEBHOOK_SECRET="your-secret"
+PAYLOAD='{"action":"labeled","issue":{"number":1,"title":"Test"}}'
+SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | awk '{print $2}')
+
+curl -X POST http://localhost:8000/webhook/github \
+  -H "Content-Type: application/json" \
+  -H "X-Hub-Signature-256: sha256=$SIGNATURE" \
+  -H "X-GitHub-Event: issues" \
+  -d "$PAYLOAD"
+```
+
+#### 常见问题
+
+**问题 1: ngrok URL 每次启动都变化**
+
+```
+原因: ngrok 免费版使用随机 URL
+
+解决方案:
+- 使用付费版 ngrok（固定子域名）
+- 或每次测试后更新 GitHub Webhook URL
+```
+
+**问题 2: Webhook 验证失败**
+
+```bash
+# 检查 .env 中的 GITHUB_WEBHOOK_SECRET
+grep GITHUB_WEBHOOK_SECRET .env
+
+# 确保 GitHub Webhook 配置中的 Secret 与之一致
+```
+
+**问题 3: ngrok 连接超时**
+
+```bash
+# 检查本地服务是否正常运行
+curl http://localhost:8000/health
+
+# 检查 ngrok 是否正常
+curl https://abc123.ngrok-free.app/health
+```
+
+#### 其他测试方案
+
+除了 ngrok，还有其他选择：
+
+**方案 A: localtunnel**
+
+```bash
+npm install -g localtunnel
+lt --port 8000 --subdomain your-name
+
+# Payload URL: https://your-name.loca.lt/webhook/github
+```
+
+**方案 B: Smee.io（GitHub 官方推荐）**
+
+```bash
+npm install -g smee-client
+smee_client https://smee.io/abc123 http://localhost:8000/webhook/github
+
+# Payload URL: https://smee.io/abc123
+```
+
+**方案 C: GitHub CLI（无需公网 URL）**
+
+```bash
+# 安装 GitHub CLI
+brew install gh  # macOS
+
+# 登录
+gh auth login
+
+# 模拟 webhook 事件
+gh webhook testing --repo owner/repo --issues --payload @test-payload.json
+```
+
+推荐使用 **ngrok**，它是最稳定和最常用的解决方案。
 
 ### 运行测试
 

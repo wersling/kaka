@@ -21,8 +21,29 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
+# 获取 python3 的完整路径
+PYTHON_CMD=$(command -v python3)
+PYTHON_VERSION=$($PYTHON_CMD --version | cut -d' ' -f2 | cut -d'.' -f1,2)
+
+# 检查版本是否符合要求（>= 3.11）
+PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d'.' -f1)
+PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d'.' -f2)
+
+if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]); then
+    echo -e "${RED}❌ Python 版本不符合要求: ${PYTHON_VERSION}${NC}"
+    echo -e "${YELLOW}项目需要 Python 3.11 或更高版本${NC}"
+    echo ""
+    echo "找到的 Python 路径: $PYTHON_CMD"
+    echo ""
+    echo "请选择以下方案之一："
+    echo "  1. 使用特定版本的 Python: PYTHON_CMD=/path/to/python3.12 ./scripts/setup.sh"
+    echo "  2. 安装 Python 3.11+ 并确保其在 PATH 中优先"
+    echo "  3. 使用 pyenv 或 conda 管理多个 Python 版本"
+    exit 1
+fi
+
 echo -e "${GREEN}✅ Python 版本: ${PYTHON_VERSION}${NC}"
+echo -e "${GREEN}📍 Python 路径: ${PYTHON_CMD}${NC}"
 
 # 检查是否需要升级 pip
 echo ""
@@ -37,10 +58,17 @@ fi
 echo ""
 echo "🔧 创建虚拟环境..."
 if [ ! -d "venv" ]; then
-    python3 -m venv venv
+    # 使用指定的 Python 命令创建虚拟环境
+    # 如果用户设置了 PYTHON_CMD 环境变量，优先使用
+    if [ -n "$PYTHON_CMD" ]; then
+        $PYTHON_CMD -m venv venv
+    else
+        python3 -m venv venv
+    fi
     echo -e "${GREEN}✅ 虚拟环境创建成功${NC}"
 else
     echo -e "${YELLOW}⚠️  虚拟环境已存在，跳过创建${NC}"
+    echo -e "${YELLOW}   如需重新创建，请先删除: rm -rf venv${NC}"
 fi
 
 # 激活虚拟环境
@@ -108,13 +136,17 @@ fi
 # 检查 Claude Code CLI
 echo ""
 echo "🔍 检查 Claude Code CLI..."
-if command -v claude-code &> /dev/null; then
+# 同时检查 claude 和 claude-code 命令
+if command -v claude &> /dev/null; then
+    CLAUDE_VERSION=$(claude --version 2>&1 || echo "已安装")
+    echo -e "${GREEN}✅ Claude Code CLI: ${CLAUDE_VERSION}${NC}"
+elif command -v claude-code &> /dev/null; then
     CLAUDE_VERSION=$(claude-code --version 2>&1 || echo "已安装")
     echo -e "${GREEN}✅ Claude Code CLI: ${CLAUDE_VERSION}${NC}"
 else
     echo -e "${YELLOW}⚠️  未找到 Claude Code CLI${NC}"
     echo "请使用以下命令安装："
-    echo "  npm install -g @anthropic/claude-code"
+    echo "  npm install -g @anthropic-ai/claude-code"
 fi
 
 # 设置脚本权限

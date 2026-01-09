@@ -63,6 +63,12 @@ ai-dev-scheduler/
 
 # 启动开发服务器
 ./scripts/dev.sh
+
+# 查看最近 20 行日志（用于排查错误）
+tail -n 20 logs/ai-scheduler.log
+
+# 实时查看日志
+tail -f logs/ai-scheduler.log
 ```
 
 ### 环境配置

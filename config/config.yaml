@@ -41,6 +41,9 @@ claude:
   cli_path: "claude-code"
   # 工作目录覆盖（可选）
   cwd: null
+  # 注意：ANTHROPIC_API_KEY 环境变量需要在系统环境中设置
+  # Claude Code CLI 会自动读取此环境变量，不需要在配置文件中引用
+  # 详见 .env.example 文件中的配置说明
 
 # 任务配置
 task:
