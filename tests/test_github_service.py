@@ -320,7 +320,7 @@ class TestCreatePullRequest:
         )
 
         call_args = mock_repo.create_pull.call_args
-        assert call_args.kwargs["title"] == "🤖 AI: Implement feature X"
+        assert call_args.kwargs["title"] == "Kaka: Implement feature X"
 
     def test_create_pr_body_contains_all_required(
         self, github_service, mock_repo, mock_pull_request
@@ -347,9 +347,8 @@ class TestCreatePullRequest:
         pr_body = call_args.kwargs["body"]
 
         # 验证必需内容
-        assert "## 🤖 AI 自动生成的 Pull Request" in pr_body
         assert "**关联 Issue**: #123" in pr_body
-        assert "## 📋 原 Issue 内容" in pr_body
+        assert "## 原 Issue：" in pr_body
         assert "Original issue description" in pr_body
 
     def test_create_pr_includes_issue_link(
@@ -484,7 +483,7 @@ class TestBuildPrBody:
         )
 
         assert "Original issue description here" in body
-        assert "## 📋 原 Issue 内容" in body
+        assert "## 原 Issue：" in body
 
     def test_pr_body_with_development_summary(self, github_service):
         """
@@ -511,7 +510,7 @@ class TestBuildPrBody:
             development_summary=summary,
         )
 
-        assert "## 🤖 AI 开发总结" in body
+        assert "## Kaka 开发总结" in body
         assert summary in body
         assert "## 执行概述" in body
 
@@ -520,16 +519,18 @@ class TestBuildPrBody:
         测试没有 AI 开发总结的情况
 
         验证：
-        - 显示警告信息
+        - 不包含开发总结部分
         - 不崩溃
         """
         body = github_service._build_pr_body(
             issue_number=123, issue_title="Test Issue", issue_body="Test"
         )
 
-        assert "AI 开发总结未生成" in body
-        assert "@testowner" in body
-        assert "请 review 后合并" in body
+        # 没有 development_summary 时，应该只包含 Issue 内容
+        assert "**关联 Issue**: #123" in body
+        assert "## 原 Issue：" in body
+        # 不应该包含 Kaka 开发总结
+        assert "Kaka 开发总结" not in body
 
     def test_pr_body_handles_empty_issue_body(self, github_service):
         """

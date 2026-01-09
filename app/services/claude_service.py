@@ -82,96 +82,13 @@ Issue URL: {issue_url}
 Issue 内容:
 {issue_body or "（无详细描述）"}
 
-任务要求：
-1. 分析需求，理解代码库结构
-2. 生成或修改代码以实现功能
-3. 运行测试确保功能正常
-4. 提交代码（commit message 格式："AI: {issue_title}"）
+请在开发完成后，使用 git commit 提交变更
 
-请按照以下步骤执行：
-- 步骤 1: 理解需求，阅读相关代码
-- 步骤 2: 探索代码库，找到需要修改的文件
-- 步骤 3: 实现功能或修复问题
-- 步骤 4: 运行测试验证（如果有测试）
-- 步骤 5: 使用 git commit 提交变更
-
-**重要：任务完成后，请生成开发总结**
-
-在完成所有开发和测试后，请在最后生成一个结构化的开发总结，使用以下格式：
-
-```
-=== AI 开发总结 ===
-
-## 执行概述
-[简要描述执行的任务和整体结果]
-
-## 变更文件
-[列出所有被修改的文件，包括新增、修改和删除的文件]
-- 新增: 文件路径
-- 修改: 文件路径 (变更说明)
-
-## 技术方案
-[说明采用的技术方案和实现思路]
-
-## 主要变更
-[详细说明主要的代码变更，包括关键逻辑和修改点]
-
-## 测试验证
-[说明如何测试验证，以及测试结果]
-
-## 风险评估
-[评估可能的风险和注意事项]
-
-=== 总结结束 ===
-```
-
-注意事项：
-- 遵循项目现有的代码风格
-- 添加必要的文档和注释
-- 确保代码质量（类型提示、错误处理等）
-- 如果遇到问题，请在 commit message 中说明
-- **必须生成上述开发总结，这是 PR 描述的关键内容**
+**重要：任务完成后的输出将作为 PR 描述的开发总结**
 
 开始执行任务。"""
 
         return prompt
-
-    def _extract_development_summary(self, output: str) -> str:
-        """
-        从 Claude 输出中提取开发总结
-
-        Args:
-            output: Claude 的完整输出
-
-        Returns:
-            str: 提取的开发总结，如果未找到则返回默认信息
-        """
-        import re
-
-        # 查找开发总结标记
-        start_marker = "=== AI 开发总结 ==="
-        end_marker = "=== 总结结束 ==="
-
-        start_idx = output.find(start_marker)
-        if start_idx == -1:
-            # 未找到总结，返回空字符串
-            return ""
-
-        end_idx = output.find(end_marker, start_idx)
-        if end_idx == -1:
-            # 没有结束标记，取从开始到结尾
-            summary = output[start_idx + len(start_marker):].strip()
-        else:
-            summary = output[start_idx + len(start_marker):end_idx].strip()
-
-        # 清理总结内容
-        summary = summary.strip()
-
-        # 如果总结为空或过短，返回默认信息
-        if len(summary) < 50:
-            return ""
-
-        return summary
 
     async def develop_feature(
         self,
@@ -222,9 +139,9 @@ Issue 内容:
                     )
                     result["execution_time"] = execution_time
 
-                    # 提取开发总结
-                    summary = self._extract_development_summary(result.get("output", ""))
-                    result["development_summary"] = summary
+                    # 直接使用 output 作为开发总结
+                    output = result.get("output", "").strip()
+                    result["development_summary"] = output
 
                     return result
                 else:
