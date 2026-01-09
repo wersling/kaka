@@ -5,12 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kaka 任务监控</title>
     <style>
+        :root {
+            /* 浅色主题变量 */
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f9fafb;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --text-tertiary: #4b5563;
+            --text-muted: #9ca3af;
+            --border-color: #e5e7eb;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --shadow-hover: rgba(0, 0, 0, 0.15);
+            --input-bg: #ffffff;
+            --input-border: #dddddd;
+        }
+
+        [data-theme="dark"] {
+            /* 深色主题变量 */
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #242424;
+            --bg-tertiary: #2a2a2a;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --text-tertiary: #d1d5db;
+            --text-muted: #6b7280;
+            --border-color: #374151;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --shadow-hover: rgba(0, 0, 0, 0.4);
+            --input-bg: #2a2a2a;
+            --input-border: #4b5563;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #f5f5f5;
+            background: var(--bg-primary);
             padding: 20px;
+            transition: background 0.3s ease;
         }
 
         .container {
@@ -19,22 +52,25 @@
         }
 
         .header {
-            background: white;
+            background: var(--bg-secondary);
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px var(--shadow-color);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
 
         .header h1 {
             font-size: 28px;
-            color: #333;
+            color: var(--text-primary);
             margin-bottom: 8px;
+            transition: color 0.3s ease;
         }
 
         .header p {
-            color: #666;
+            color: var(--text-secondary);
             font-size: 14px;
+            transition: color 0.3s ease;
         }
 
         .stats {
@@ -45,24 +81,25 @@
         }
 
         .stat-card {
-            background: white;
+            background: var(--bg-secondary);
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
+            box-shadow: 0 2px 4px var(--shadow-color);
+            transition: transform 0.2s, background 0.3s ease, box-shadow 0.3s ease;
         }
 
         .stat-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 8px var(--shadow-hover);
         }
 
         .stat-card h3 {
             font-size: 13px;
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            transition: color 0.3s ease;
         }
 
         .stat-card .value {
@@ -70,29 +107,31 @@
             font-weight: bold;
         }
 
-        .stat-card.total .value { color: #333; }
+        .stat-card.total .value { color: var(--text-primary); }
         .stat-card.pending .value { color: #f59e0b; }
         .stat-card.running .value { color: #3b82f6; }
         .stat-card.completed .value { color: #10b981; }
         .stat-card.failed .value { color: #ef4444; }
-        .stat-card.cancelled .value { color: #6b7280; }
+        .stat-card.cancelled .value { color: var(--text-muted); }
 
         .tasks-header {
-            background: white;
+            background: var(--bg-secondary);
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px var(--shadow-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 15px;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
 
         .tasks-header h2 {
             font-size: 20px;
-            color: #333;
+            color: var(--text-primary);
+            transition: color 0.3s ease;
         }
 
         .controls {
@@ -110,10 +149,12 @@
 
         .filter-group select {
             padding: 8px 12px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--input-border);
             border-radius: 6px;
             font-size: 14px;
-            background: white;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
         }
 
         .auto-refresh {
@@ -129,8 +170,9 @@
 
         .auto-refresh label {
             font-size: 14px;
-            color: #666;
+            color: var(--text-secondary);
             cursor: pointer;
+            transition: color 0.3s ease;
         }
 
         .btn {
@@ -152,10 +194,11 @@
         }
 
         .tasks-table {
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px var(--shadow-color);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
 
         table {
@@ -164,30 +207,35 @@
         }
 
         thead {
-            background: #f9fafb;
+            background: var(--bg-tertiary);
+            transition: background 0.3s ease;
         }
 
         th, td {
             padding: 14px 16px;
             text-align: left;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
+            transition: border-color 0.3s ease;
         }
 
         th {
             font-weight: 600;
-            color: #374151;
+            color: var(--text-primary);
             font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            transition: color 0.3s ease;
         }
 
         td {
             font-size: 14px;
-            color: #4b5563;
+            color: var(--text-tertiary);
+            transition: color 0.3s ease;
         }
 
         tr:hover {
-            background: #f9fafb;
+            background: var(--bg-tertiary);
+            transition: background 0.3s ease;
         }
 
         .status-badge {
@@ -209,7 +257,8 @@
         .task-id {
             font-family: 'Courier New', monospace;
             font-size: 13px;
-            color: #6b7280;
+            color: var(--text-muted);
+            transition: color 0.3s ease;
         }
 
         .issue-link {
@@ -489,10 +538,57 @@
             color: #e5e7eb;
             flex: 1;
         }
+
+        /* 主题切换按钮样式 */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px var(--shadow-color);
+        }
+
+        .theme-toggle:hover {
+            box-shadow: 0 4px 8px var(--shadow-hover);
+        }
+
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .container {
+            position: relative;
+        }
+
+        .header {
+            padding-right: 120px; /* 为右上角按钮留出空间 */
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="切换主题">
+            <svg id="theme-icon-light" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+            <span id="theme-text">浅色</span>
+        </button>
+
         <div class="header">
             <h1>Kaka 任务监控</h1>
             <p>实时监控 AI 开发任务的执行状态</p>
@@ -609,6 +705,47 @@
         let currentTaskId = null;
         let currentEventSource = null;
         let isAutoScrolling = true; // 是否自动滚动
+
+        // 主题管理
+        const THEME_KEY = 'kaka-theme';
+        const THEME_LIGHT = 'light';
+        const THEME_DARK = 'dark';
+
+        // 初始化主题（默认为浅色）
+        function initTheme() {
+            const savedTheme = localStorage.getItem(THEME_KEY) || THEME_LIGHT;
+            setTheme(savedTheme);
+        }
+
+        // 设置主题
+        function setTheme(theme) {
+            const html = document.documentElement;
+            const themeIconLight = document.getElementById('theme-icon-light');
+            const themeIconDark = document.getElementById('theme-icon-dark');
+            const themeText = document.getElementById('theme-text');
+
+            if (theme === THEME_DARK) {
+                html.setAttribute('data-theme', 'dark');
+                themeIconLight.style.display = 'none';
+                themeIconDark.style.display = 'block';
+                themeText.textContent = '深色';
+            } else {
+                html.removeAttribute('data-theme');
+                themeIconLight.style.display = 'block';
+                themeIconDark.style.display = 'none';
+                themeText.textContent = '浅色';
+            }
+
+            localStorage.setItem(THEME_KEY, theme);
+        }
+
+        // 切换主题
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme') === THEME_DARK ? THEME_DARK : THEME_LIGHT;
+            const newTheme = currentTheme === THEME_DARK ? THEME_LIGHT : THEME_DARK;
+            setTheme(newTheme);
+        }
 
         // 加载统计数据
         async function loadStats() {
@@ -1031,6 +1168,9 @@
 
         // 初始化
         document.getElementById('auto-refresh').addEventListener('change', toggleAutoRefresh);
+
+        // 初始化主题
+        initTheme();
 
         // 首次加载
         loadStats();
