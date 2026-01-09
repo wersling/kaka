@@ -169,6 +169,15 @@ async def lifespan(app: FastAPI):
     logger.info(f"✅ 配置加载成功")
     logger.info(f"✅ 日志系统初始化完成 (级别: {config.logging.level})")
 
+    # 初始化数据库
+    from app.db.database import init_db
+    try:
+        init_db()
+        logger.info("✅ 数据库初始化完成")
+    except Exception as e:
+        logger.error(f"❌ 数据库初始化失败: {e}", exc_info=True)
+        raise
+
     # 记录配置信息
     logger.info(f"📋 仓库: {config.github.repo_full_name}")
     logger.info(f"📂 本地路径: {config.repository.path}")
@@ -228,6 +237,14 @@ app.add_middleware(TimingMiddleware)
 
 # 注册路由
 app.include_router(health_router, tags=["Health"])
+
+# 注册任务监控路由
+from app.api.tasks import router as tasks_router
+from app.api.dashboard import router as dashboard_router
+from app.api.logs import router as logs_router
+app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
+app.include_router(dashboard_router, tags=["Dashboard"])
+app.include_router(logs_router, prefix="/api", tags=["Logs"])
 
 
 # 全局异常处理器

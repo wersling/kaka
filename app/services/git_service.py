@@ -313,6 +313,22 @@ class GitService(LoggerMixin):
             self.logger.error(f"获取状态失败: {e}", exc_info=True)
             return {}
 
+    def branch_exists(self, branch_name: str) -> bool:
+        """
+        检查分支是否存在
+
+        Args:
+            branch_name: 分支名
+
+        Returns:
+            bool: 分支是否存在
+        """
+        try:
+            return branch_name in self.repo.heads
+        except Exception as e:
+            self.logger.error(f"检查分支失败: {e}", exc_info=True)
+            return False
+
     def checkout_branch(self, branch_name: str) -> None:
         """
         切换分支

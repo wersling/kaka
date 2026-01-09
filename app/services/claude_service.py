@@ -96,6 +96,8 @@ Issue 内容:
         issue_title: str,
         issue_url: str,
         issue_body: str,
+        task_service=None,
+        task_id: str = None,
     ) -> dict[str, any]:
         """
         调用 Claude Code CLI 进行开发
@@ -105,6 +107,8 @@ Issue 内容:
             issue_title: Issue 标题
             issue_url: Issue URL
             issue_body: Issue 内容
+            task_service: 任务服务（可选，用于实时日志）
+            task_id: 任务 ID（可选，用于实时日志）
 
         Returns:
             dict: 执行结果
@@ -124,10 +128,36 @@ Issue 内容:
         # 尝试多次执行（重试机制）
         last_error = None
         for attempt in range(1, self.max_retries + 1):
+            # 检查任务是否已被取消
+            if task_service and task_id:
+                task = task_service.get_task_by_id(task_id)
+                if task and task.status.value == "cancelled":
+                    self.logger.warning(f"任务已被取消，停止执行: {task_id}")
+                    return {
+                        "success": False,
+                        "output": "",
+                        "errors": "任务已被取消",
+                        "returncode": -1,
+                        "execution_time": time.time() - start_time,
+                        "cancelled": True,
+                    }
+
             try:
                 self.logger.info(f"执行尝试 {attempt}/{self.max_retries}")
 
-                result = await self._execute_claude(prompt)
+                # 记录重试日志
+                if task_service and task_id:
+                    task_service.add_task_log(
+                        task_id,
+                        "INFO",
+                        f"Claude CLI 执行尝试 {attempt}/{self.max_retries}"
+                    )
+
+                result = await self._execute_claude(
+                    prompt,
+                    task_service=task_service,
+                    task_id=task_id,
+                )
 
                 execution_time = time.time() - start_time
 
@@ -182,12 +212,19 @@ Issue 内容:
             "execution_time": execution_time,
         }
 
-    async def _execute_claude(self, prompt: str) -> dict[str, any]:
+    async def _execute_claude(
+        self,
+        prompt: str,
+        task_service=None,
+        task_id: str = None,
+    ) -> dict[str, any]:
         """
         执行 Claude Code CLI
 
         Args:
             prompt: 发送给 Claude 的提示词
+            task_service: 任务服务（可选，用于实时日志）
+            task_id: 任务 ID（可选，用于实时日志）
 
         Returns:
             dict: 执行结果
@@ -196,25 +233,13 @@ Issue 内容:
             asyncio.TimeoutError: 执行超时
             Exception: 执行失败
         """
-        prompt_file = None
+        process = None
         try:
-            # 将 prompt 写入临时文件
-            import tempfile
-            import os
-
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                suffix=".txt",
-                delete=False,
-            ) as f:
-                f.write(prompt)
-                prompt_file = f.name
-
-            self.logger.debug(f"Prompt 已写入临时文件: {prompt_file}")
-
-            # 构建命令
+            # 构建命令 - 使用 -p 参数传递 prompt，避免流式模式限制
             cmd = [
                 self.claude_cli_path,
+                "-p",
+                prompt,
             ]
 
             # 如果配置了跳过权限检查，添加参数
@@ -222,39 +247,50 @@ Issue 内容:
                 cmd.append("--dangerously-skip-permissions")
                 self.logger.debug("已启用 --dangerously-skip-permissions 模式")
 
-            # 如果有 prompt 文件，添加到命令
-            # 注意：工作目录通过 subprocess 的 cwd 参数设置
-            # 这里假设 claude CLI 接受从 stdin 读取
+            self.logger.debug(f"执行命令: {self.claude_cli_path} -p <prompt> [参数]")
 
-            self.logger.debug(f"执行命令: {' '.join(cmd)}")
-
-            # 执行命令
+            # 执行命令 - 不使用 stdin，避免流式模式
             process = await asyncio.create_subprocess_exec(
                 *cmd,
-                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 cwd=str(self.repo_path),
             )
 
-            # 写入 prompt 到 stdin
-            stdin_input = prompt.encode()
+            # 注册进程到进程管理器（如果提供了 task_id）
+            if task_id:
+                from app.services.process_manager import process_manager
+                process_manager.register_process(task_id, process)
+                self.logger.debug(f"进程已注册到管理器: task_id={task_id}, pid={process.pid}")
 
             try:
                 stdout, stderr = await asyncio.wait_for(
-                    process.communicate(input=stdin_input),
+                    process.communicate(),
                     timeout=self.timeout,
                 )
             except asyncio.TimeoutError:
                 process.kill()
                 await process.wait()
                 raise
+            except asyncio.CancelledError:
+                # 任务被取消
+                self.logger.info(f"任务被取消，终止进程: task_id={task_id}")
+                if process.returncode is None:
+                    process.terminate()
+                    try:
+                        await asyncio.wait_for(process.wait(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        process.kill()
+                        await process.wait()
+                raise
 
             # 解码输出
             output = stdout.decode("utf-8", errors="replace")
             errors = stderr.decode("utf-8", errors="replace")
 
-            # 记录输出
+            # 注意：不再实时记录 Claude 输出到数据库，只记录系统级别日志
+
+            # 记录输出到日志
             if output:
                 self.logger.debug(f"Claude 输出:\n{output[:500]}")
             if errors:
@@ -268,6 +304,13 @@ Issue 内容:
             }
 
         except asyncio.TimeoutError:
+            # 记录超时错误
+            if task_service and task_id:
+                task_service.add_task_log(
+                    task_id,
+                    "ERROR",
+                    f"Claude CLI 执行超时（{self.timeout}秒）"
+                )
             self.logger.error(f"Claude CLI 执行超时（{self.timeout}秒）")
             raise
         except FileNotFoundError:
@@ -275,20 +318,22 @@ Issue 内容:
                 f"Claude CLI 未找到: {self.claude_cli_path}. "
                 f"请确保 Claude Code CLI 已正确安装并添加到 PATH"
             )
+            if task_service and task_id:
+                task_service.add_task_log(task_id, "ERROR", error_msg)
             self.logger.error(error_msg)
             raise Exception(error_msg)
         except Exception as e:
-            self.logger.error(f"执行 Claude CLI 失败: {e}", exc_info=True)
+            error_msg = f"执行 Claude CLI 失败: {e}"
+            if task_service and task_id:
+                task_service.add_task_log(task_id, "ERROR", error_msg)
+            self.logger.error(error_msg, exc_info=True)
             raise
         finally:
-            # 清理临时文件（安全修复：确保敏感prompt被删除）
-            if prompt_file and os.path.exists(prompt_file):
-                try:
-                    os.remove(prompt_file)
-                    self.logger.debug(f"已清理临时文件: {prompt_file}")
-                except Exception as e:
-                    # 记录警告但不要抛出异常（清理失败不影响主流程）
-                    self.logger.warning(f"清理临时文件失败: {e}")
+            # 无论成功还是失败，都注销进程
+            if task_id and process:
+                from app.services.process_manager import process_manager
+                process_manager.unregister_process(task_id)
+                self.logger.debug(f"进程已从管理器注销: task_id={task_id}")
 
     async def test_connection(self) -> bool:
         """

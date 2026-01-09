@@ -130,6 +130,7 @@ class TaskResult(BaseModel):
     error_message: Optional[str] = None
     execution_time: Optional[float] = None  # 秒
     details: dict[str, Any] = Field(default_factory=dict)
+    cancelled: bool = False  # 任务是否被取消
 
 
 class RepositoryInfo(BaseModel):

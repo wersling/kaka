@@ -85,6 +85,7 @@ class GitHubService(LoggerMixin):
                 - url (str): PR URL
                 - html_url (str): PR HTML URL
                 - state (str): PR 状态
+                或 None（如果没有提交）
         """
         try:
             from app.config import get_config
@@ -95,9 +96,35 @@ class GitHubService(LoggerMixin):
             base = base_branch or config.repository.default_branch
 
             self.logger.info(
-                f"创建 PR: {branch_name} -> {base} "
+                f"准备创建 PR: {branch_name} -> {base} "
                 f"(关联 Issue #{issue_number})"
             )
+
+            # 检查分支之间是否有提交差异
+            try:
+                # 获取分支的比较信息
+                comparison = repo.compare(base, branch_name)
+
+                # 检查是否有提交（ahead_by > 0 表示有新提交）
+                if comparison.ahead_by == 0:
+                    # 没有新提交，无法创建 PR
+                    self.logger.warning(
+                        f"⚠️  无法创建 PR: 分支 '{branch_name}' 与 '{base}' 之间没有新的提交\n"
+                        f"可能原因:\n"
+                        f"  1. Claude CLI 执行失败，未产生任何代码变更\n"
+                        f"  2. Claude CLI 判断任务无法完成，没有提交代码\n"
+                        f"  3. 分支创建失败或未正确切换\n"
+                        f"建议: 请检查 Claude CLI 的执行日志以了解详细原因"
+                    )
+                    return None
+
+                self.logger.info(
+                    f"检测到 {comparison.ahead_by} 个新提交，继续创建 PR"
+                )
+
+            except GithubException as e:
+                # 如果比较失败，仍然尝试创建 PR（让后续代码处理错误）
+                self.logger.warning(f"无法比较分支差异: {e}，将继续尝试创建 PR")
 
             # 构建 PR 标题和描述
             pr_title = f"Kaka: {issue_title}"
@@ -124,8 +151,22 @@ class GitHubService(LoggerMixin):
             }
 
         except GithubException as e:
-            self.logger.error(f"创建 PR 失败: {e}", exc_info=True)
-            raise
+            # 检查是否是 "No commits" 错误
+            if e.status == 422 and "No commits between" in str(e):
+                self.logger.warning(
+                    f"⚠️  无法创建 PR: 分支 '{branch_name}' 与目标分支之间没有提交差异\n"
+                    f"GitHub API 错误: {e.data.get('message', '未知错误')}\n"
+                    f"可能原因: Claude CLI 执行后未产生代码提交\n"
+                    f"建议: 请检查 Claude CLI 的执行输出和日志"
+                )
+                return None
+            else:
+                # 其他 GitHub API 错误
+                self.logger.error(
+                    f"创建 PR 失败 (GitHub API 错误 {e.status}): {e.data.get('message', str(e))}",
+                    exc_info=False  # 不打印完整 traceback
+                )
+                raise
 
     def _build_pr_body(
         self,
