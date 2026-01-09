@@ -88,7 +88,7 @@ def mock_pull_request():
     """
     pr = MagicMock()
     pr.number = 456
-    pr.title = "🤖 AI: Test Issue"
+    pr.title = "Kaka: Test Issue"
     pr.body = "Test PR Body"
     pr.state = "open"
     pr.html_url = "https://github.com/testowner/testrepo/pull/456"
@@ -297,16 +297,16 @@ class TestCreatePullRequest:
         assert result["url"] == "https://api.github.com/repos/testowner/testrepo/pulls/456"
         assert result["html_url"] == "https://github.com/testowner/testrepo/pull/456"
         assert result["state"] == "open"
-        assert result["title"] == "🤖 AI: Test Issue"
+        assert result["title"] == "Kaka: Test Issue"
 
         mock_repo.create_pull.assert_called_once()
 
     def test_create_pr_title_format(self, github_service, mock_repo, mock_pull_request):
         """
-        测试 PR 标题格式正确（🤖 AI: 前缀）
+        测试 PR 标题格式正确（Kaka: 前缀）
 
         验证：
-        - 标题包含 🤖 AI: 前缀
+        - 标题包含 Kaka: 前缀
         - 前缀后跟原 Issue 标题
         """
         github_service._github_mock.get_repo.return_value = mock_repo
@@ -329,9 +329,9 @@ class TestCreatePullRequest:
         测试 PR body 包含所有必需信息
 
         验证：
-        - 包含 Issue 链接
+        - 包含 Issue 链接和执行时间
+        - 包含原 Issue 标题
         - 包含原 Issue 内容
-        - 包含基本元信息
         """
         github_service._github_mock.get_repo.return_value = mock_repo
         mock_repo.create_pull.return_value = mock_pull_request
@@ -341,6 +341,7 @@ class TestCreatePullRequest:
             issue_number=123,
             issue_title="Test Issue",
             issue_body="Original issue description",
+            execution_time=123.5,
         )
 
         call_args = mock_repo.create_pull.call_args
@@ -348,18 +349,19 @@ class TestCreatePullRequest:
 
         # 验证必需内容
         assert "**关联 Issue**: #123" in pr_body
-        assert "## 原 Issue：" in pr_body
+        assert "**用时**: 123.5秒" in pr_body
+        assert "## 原 Issue：Test Issue" in pr_body
         assert "Original issue description" in pr_body
 
-    def test_create_pr_includes_issue_link(
+    def test_create_pr_includes_execution_time(
         self, github_service, mock_repo, mock_pull_request
     ):
         """
-        测试 PR body 包含 Issue 链接
+        测试 PR body 包含执行时间
 
         验证：
-        - 链接格式正确
-        - 包含完整的 Issue URL
+        - 执行时间格式正确
+        - 时间显示在 PR body 中
         """
         github_service._github_mock.get_repo.return_value = mock_repo
         mock_repo.create_pull.return_value = mock_pull_request
@@ -369,12 +371,14 @@ class TestCreatePullRequest:
             issue_number=123,
             issue_title="Test",
             issue_body="Body",
+            execution_time=45.7,
         )
 
         call_args = mock_repo.create_pull.call_args
         pr_body = call_args.kwargs["body"]
 
-        # Issue 链接应该在 body 中
+        # 验证执行时间
+        assert "**用时**: 45.7秒" in pr_body
         assert "#123" in pr_body
 
     def test_create_pr_default_base_branch(
@@ -456,17 +460,19 @@ class TestBuildPrBody:
 
     def test_pr_body_includes_issue_link(self, github_service):
         """
-        测试包含 Issue 链接
+        测试包含 Issue 链接和执行时间
 
         验证：
         - body 包含 Issue 编号
         - 格式正确
+        - 默认执行时间为"未知"
         """
         body = github_service._build_pr_body(
             issue_number=123, issue_title="Test Issue", issue_body="Test content"
         )
 
         assert "**关联 Issue**: #123" in body
+        assert "**用时**: 未知" in body
 
     def test_pr_body_includes_original_content(self, github_service):
         """
@@ -485,11 +491,12 @@ class TestBuildPrBody:
         assert "Original issue description here" in body
         assert "## 原 Issue：" in body
 
-    def test_pr_body_with_development_summary(self, github_service):
+    def test_pr_body_with_execution_time_and_development_summary(self, github_service):
         """
-        测试包含 AI 开发总结
+        测试包含执行时间和 AI 开发总结
 
         验证：
+        - 执行时间正确显示
         - AI 总结被包含
         - 格式正确
         """
@@ -505,14 +512,19 @@ class TestBuildPrBody:
 
         body = github_service._build_pr_body(
             issue_number=123,
-            issue_title="Test Issue",
-            issue_body="Test",
+            issue_title="User Authentication",
+            issue_body="Implement user auth",
+            execution_time=67.8,
             development_summary=summary,
         )
 
+        assert "**关联 Issue**: #123" in body
+        assert "**用时**: 67.8秒" in body
+        assert "## 原 Issue：User Authentication" in body
         assert "## Kaka 开发总结" in body
         assert summary in body
         assert "## 执行概述" in body
+        assert "@testowner 请 review 后决策是否 PR，谢谢！" in body
 
     def test_pr_body_without_development_summary(self, github_service):
         """
@@ -520,6 +532,7 @@ class TestBuildPrBody:
 
         验证：
         - 不包含开发总结部分
+        - 不包含 @mention
         - 不崩溃
         """
         body = github_service._build_pr_body(
@@ -528,9 +541,10 @@ class TestBuildPrBody:
 
         # 没有 development_summary 时，应该只包含 Issue 内容
         assert "**关联 Issue**: #123" in body
-        assert "## 原 Issue：" in body
-        # 不应该包含 Kaka 开发总结
+        assert "## 原 Issue：Test Issue" in body
+        # 不应该包含 Kaka 开发总结和 @mention
         assert "Kaka 开发总结" not in body
+        assert "@testowner 请 review" not in body
 
     def test_pr_body_handles_empty_issue_body(self, github_service):
         """

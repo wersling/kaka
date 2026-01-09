@@ -204,12 +204,12 @@ class TestBuildPrompt:
 
         assert "（无详细描述）" in prompt
 
-    def test_build_prompt_includes_task_requirements(self, claude_service):
+    def test_build_prompt_includes_development_summary_note(self, claude_service):
         """
-        测试：prompt 应该包含任务要求
+        测试：prompt 应该包含开发总结说明
 
         场景：构建 prompt
-        期望：包含 4 个主要任务要求
+        期望：包含任务完成后输出作为开发总结的重要说明
         """
         prompt = claude_service._build_prompt(
             issue_url="https://github.com/test/test/issues/789",
@@ -218,17 +218,15 @@ class TestBuildPrompt:
             issue_number=789,
         )
 
-        assert "1. 分析需求，理解代码库结构" in prompt
-        assert "2. 生成或修改代码以实现功能" in prompt
-        assert "3. 运行测试确保功能正常" in prompt
-        assert "4. 提交代码" in prompt
+        assert "**重要：任务完成后的输出将作为 PR 描述的开发总结**" in prompt
+        assert "请在开发完成后，使用 git commit 提交变更" in prompt
 
-    def test_build_prompt_includes_step_by_step_instructions(self, claude_service):
+    def test_build_prompt_includes_commit_instruction(self, claude_service):
         """
-        测试：prompt 应该包含分步说明
+        测试：prompt 应该包含 git commit 说明
 
         场景：构建 prompt
-        期望：包含 5 个步骤
+        期望：包含提交代码的说明
         """
         prompt = claude_service._build_prompt(
             issue_url="https://github.com/test/test/issues/101",
@@ -237,18 +235,14 @@ class TestBuildPrompt:
             issue_number=101,
         )
 
-        assert "- 步骤 1: 理解需求，阅读相关代码" in prompt
-        assert "- 步骤 2: 探索代码库，找到需要修改的文件" in prompt
-        assert "- 步骤 3: 实现功能或修复问题" in prompt
-        assert "- 步骤 4: 运行测试验证（如果有测试）" in prompt
-        assert "- 步骤 5: 使用 git commit 提交变更" in prompt
+        assert "git commit 提交变更" in prompt
 
-    def test_build_prompt_includes_notes(self, claude_service):
+    def test_build_prompt_simplified_format(self, claude_service):
         """
-        测试：prompt 应该包含注意事项
+        测试：prompt 应该使用简化格式
 
         场景：构建 prompt
-        期望：包含代码风格、文档、质量等注意事项
+        期望：包含简洁的说明，不包含详细的步骤和注意事项
         """
         prompt = claude_service._build_prompt(
             issue_url="https://github.com/test/test/issues/202",
@@ -257,34 +251,23 @@ class TestBuildPrompt:
             issue_number=202,
         )
 
-        assert "- 遵循项目现有的代码风格" in prompt
-        assert "- 添加必要的文档和注释" in prompt
-        assert "- 确保代码质量（类型提示、错误处理等）" in prompt
-        assert "- 如果遇到问题，请在 commit message 中说明" in prompt
+        # 应该包含基本元素
+        assert "请分析以下 GitHub Issue 并完成开发任务：" in prompt
+        assert "Issue 内容:" in prompt
 
-    def test_build_prompt_includes_commit_message_template(self, claude_service):
-        """
-        测试：prompt 应该包含 commit message 模板
-
-        场景：构建 prompt
-        期望：包含 "AI: {issue_title}" 格式的 commit message
-        """
-        issue_title = "Fix Authentication Bug"
-        prompt = claude_service._build_prompt(
-            issue_url="https://github.com/test/test/issues/303",
-            issue_title=issue_title,
-            issue_body="Body",
-            issue_number=303,
-        )
-
-        assert f'commit message 格式："AI: {issue_title}"' in prompt
+        # 不应该包含旧的详细步骤和注意事项
+        assert "任务要求：" not in prompt
+        assert "请按照以下步骤执行：" not in prompt
+        assert "注意事项：" not in prompt
+        assert "- 遵循项目现有的代码风格" not in prompt
+        assert "- 添加必要的文档和注释" not in prompt
 
     def test_build_prompt_correct_format(self, claude_service):
         """
         测试：prompt 格式应该正确
 
         场景：构建完整的 prompt
-        期望：包含正确的标题、分隔符和结构
+        期望：包含正确的标题、Issue 信息和简化说明
         """
         prompt = claude_service._build_prompt(
             issue_url="https://github.com/test/test/issues/404",
@@ -293,12 +276,13 @@ class TestBuildPrompt:
             issue_number=404,
         )
 
-        # 验证主要标题
+        # 验证主要标题和内容
         assert "请分析以下 GitHub Issue 并完成开发任务：" in prompt
+        assert "Issue #404: Error Handling" in prompt
+        assert "Issue URL: https://github.com/test/test/issues/404" in prompt
         assert "Issue 内容:" in prompt
-        assert "任务要求：" in prompt
-        assert "请按照以下步骤执行：" in prompt
-        assert "注意事项：" in prompt
+        assert "Add error handling" in prompt
+        assert "**重要：任务完成后的输出将作为 PR 描述的开发总结**" in prompt
         assert "开始执行任务。" in prompt
 
 
@@ -316,10 +300,10 @@ class TestDevelopFeature:
         测试：成功执行开发任务
 
         场景：CLI 返回成功
-        期望：返回成功结果，包含所有字段
+        期望：返回成功结果，包含所有字段和 development_summary
         """
         mock_process.returncode = 0
-        mock_process.communicate.return_value = (b"Success output", b"")
+        mock_process.communicate.return_value = (b"Success output\nDevelopment completed", b"")
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await claude_service.develop_feature(
@@ -334,6 +318,9 @@ class TestDevelopFeature:
             assert result["returncode"] == 0
             assert "execution_time" in result
             assert result["execution_time"] > 0
+            # 验证 development_summary 字段存在且来自 output
+            assert "development_summary" in result
+            assert "Development completed" in result["development_summary"]
 
     @pytest.mark.asyncio
     async def test_develop_feature_returns_all_required_fields(self, claude_service, mock_process):
@@ -341,10 +328,10 @@ class TestDevelopFeature:
         测试：返回结果应该包含所有必需字段
 
         场景：执行开发任务
-        期望：返回包含 success, output, errors, returncode, execution_time
+        期望：返回包含 success, output, errors, returncode, execution_time, development_summary
         """
         mock_process.returncode = 0
-        mock_process.communicate.return_value = (b"Output", b"")
+        mock_process.communicate.return_value = (b"Output with summary", b"")
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await claude_service.develop_feature(
@@ -359,6 +346,42 @@ class TestDevelopFeature:
             assert "errors" in result
             assert "returncode" in result
             assert "execution_time" in result
+            assert "development_summary" in result
+
+    @pytest.mark.asyncio
+    async def test_develop_feature_includes_development_summary(self, claude_service, mock_process):
+        """
+        测试：成功执行后应该包含 development_summary
+
+        场景：CLI 返回成功
+        期望：development_summary 字段等于 output
+        """
+        test_output = """## 执行概述
+成功实现了用户认证功能
+
+## 变更文件
+- app/auth/login.py
+- app/models/user.py
+
+## 技术方案
+使用 JWT 进行身份验证"""
+
+        mock_process.returncode = 0
+        mock_process.communicate.return_value = (test_output.encode(), b"")
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            result = await claude_service.develop_feature(
+                issue_number=789,
+                issue_title="User Auth",
+                issue_url="https://github.com/test/test/issues/789",
+                issue_body="Implement user auth",
+            )
+
+            assert result["success"] is True
+            assert "development_summary" in result
+            # development_summary 应该等于 output（去除首尾空白）
+            assert result["development_summary"] == test_output.strip()
+            assert result["output"] == test_output
 
     @pytest.mark.asyncio
     async def test_develop_feature_records_execution_time(self, claude_service, mock_process):
