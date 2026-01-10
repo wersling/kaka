@@ -233,14 +233,26 @@ Issue 内容:
             asyncio.TimeoutError: 执行超时
             Exception: 执行失败
         """
+        prompt_file = None
         process = None
         try:
-            # 构建命令 - 使用 -p 参数传递 prompt
+            # 将 prompt 写入临时文件
+            import tempfile
+            import os
+
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                suffix=".txt",
+                delete=False,
+            ) as f:
+                f.write(prompt)
+                prompt_file = f.name
+
+            self.logger.debug(f"Prompt 已写入临时文件: {prompt_file}")
+
+            # 构建命令
             cmd = [
                 self.claude_cli_path,
-                "-p",
-                prompt,
-                "--output-format", "json",  # 明确指定 JSON 输出格式，避免流式模式
             ]
 
             # 如果配置了跳过权限检查，添加参数
@@ -248,114 +260,52 @@ Issue 内容:
                 cmd.append("--dangerously-skip-permissions")
                 self.logger.debug("已启用 --dangerously-skip-permissions 模式")
 
-            # 打印完整的命令（用于调试）
-            cmd_str = " ".join([f'"{arg}"' if " " in arg else arg for arg in cmd])
-            self.logger.info(f"🔧 执行 Claude CLI 命令: {cmd_str}")
+            # 如果有 prompt 文件，添加到命令
+            # 注意：工作目录通过 subprocess 的 cwd 参数设置
+            # 这里假设 claude CLI 接受从 stdin 读取
 
-            # 执行命令 - 不使用 stdin，避免流式模式
+            self.logger.debug(f"执行命令: {' '.join(cmd)}")
+
+            # 执行命令
             process = await asyncio.create_subprocess_exec(
                 *cmd,
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 cwd=str(self.repo_path),
             )
 
-            # 注册进程到进程管理器（如果提供了 task_id）
-            if task_id:
-                from app.services.process_manager import process_manager
-                process_manager.register_process(task_id, process)
-                self.logger.debug(f"进程已注册到管理器: task_id={task_id}, pid={process.pid}")
+            # 写入 prompt 到 stdin
+            stdin_input = prompt.encode()
 
             try:
                 stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
+                    process.communicate(input=stdin_input),
                     timeout=self.timeout,
                 )
             except asyncio.TimeoutError:
                 process.kill()
                 await process.wait()
                 raise
-            except asyncio.CancelledError:
-                # 任务被取消
-                self.logger.info(f"任务被取消，终止进程: task_id={task_id}")
-                if process.returncode is None:
-                    process.terminate()
-                    try:
-                        await asyncio.wait_for(process.wait(), timeout=5.0)
-                    except asyncio.TimeoutError:
-                        process.kill()
-                        await process.wait()
-                raise
 
             # 解码输出
             output = stdout.decode("utf-8", errors="replace")
             errors = stderr.decode("utf-8", errors="replace")
 
-            # 处理 JSON 格式输出
-            actual_output = output
-            actual_errors = errors
-            json_error = None
-
-            if output.strip().startswith("{"):
-                try:
-                    import json
-                    output_json = json.loads(output)
-
-                    # 检查是否是错误响应
-                    if output_json.get("type") == "result" and output_json.get("subtype") == "error_during_execution":
-                        # 提取错误信息
-                        error_list = output_json.get("errors", [])
-                        if error_list:
-                            json_error = error_list[0] if isinstance(error_list, list) else str(error_list)
-                            self.logger.error(f"Claude CLI 返回错误: {json_error}")
-                            self.logger.error(f"完整错误输出: {output}")
-
-                            actual_errors = json_error
-                            actual_output = ""  # 错误情况下清空输出
-                    else:
-                        # 正常响应，提取实际数据
-                        # JSON 输出格式中，实际响应可能在不同的字段中
-                        # 尝试提取 data、result、content 等字段
-                        for key in ["data", "result", "content", "output"]:
-                            if key in output_json:
-                                data = output_json[key]
-                                if isinstance(data, str):
-                                    actual_output = data
-                                elif isinstance(data, dict):
-                                    # 可能是嵌套的结构
-                                    actual_output = json.dumps(data, ensure_ascii=False)
-                                break
-
-                        # 如果没有找到特定字段，直接使用整个 JSON
-                        if actual_output == output:
-                            # 移除顶层 JSON 包装，提取有用信息
-                            if "data" not in output_json and "result" not in output_json:
-                                actual_output = json.dumps(output_json, ensure_ascii=False, indent=2)
-
-                except json.JSONDecodeError as e:
-                    self.logger.warning(f"无法解析 JSON 输出: {e}，使用原始输出")
-
-            # 记录输出到日志
-            if actual_output:
-                self.logger.debug(f"Claude 输出（前500字符）:\n{actual_output[:500]}")
-            if actual_errors:
-                self.logger.warning(f"Claude 错误: {actual_errors}")
+            # 记录输出
+            if output:
+                self.logger.debug(f"Claude 输出:\n{output[:500]}")
+            if errors:
+                self.logger.warning(f"Claude 错误:\n{errors[:500]}")
 
             return {
-                "success": process.returncode == 0 and not json_error,
-                "output": actual_output,
-                "errors": actual_errors or str(json_error) if json_error else errors,
+                "success": process.returncode == 0,
+                "output": output,
+                "errors": errors,
                 "returncode": process.returncode,
             }
 
         except asyncio.TimeoutError:
-            # 记录超时错误
-            if task_service and task_id:
-                task_service.add_task_log(
-                    task_id,
-                    "ERROR",
-                    f"Claude CLI 执行超时（{self.timeout}秒）"
-                )
             self.logger.error(f"Claude CLI 执行超时（{self.timeout}秒）")
             raise
         except FileNotFoundError:
@@ -363,22 +313,20 @@ Issue 内容:
                 f"Claude CLI 未找到: {self.claude_cli_path}. "
                 f"请确保 Claude Code CLI 已正确安装并添加到 PATH"
             )
-            if task_service and task_id:
-                task_service.add_task_log(task_id, "ERROR", error_msg)
             self.logger.error(error_msg)
             raise Exception(error_msg)
         except Exception as e:
-            error_msg = f"执行 Claude CLI 失败: {e}"
-            if task_service and task_id:
-                task_service.add_task_log(task_id, "ERROR", error_msg)
-            self.logger.error(error_msg, exc_info=True)
+            self.logger.error(f"执行 Claude CLI 失败: {e}", exc_info=True)
             raise
         finally:
-            # 无论成功还是失败，都注销进程
-            if task_id and process:
-                from app.services.process_manager import process_manager
-                process_manager.unregister_process(task_id)
-                self.logger.debug(f"进程已从管理器注销: task_id={task_id}")
+            # 清理临时文件（安全修复：确保敏感prompt被删除）
+            if prompt_file and os.path.exists(prompt_file):
+                try:
+                    os.remove(prompt_file)
+                    self.logger.debug(f"已清理临时文件: {prompt_file}")
+                except Exception as e:
+                    # 记录警告但不要抛出异常（清理失败不影响主流程）
+                    self.logger.warning(f"清理临时文件失败: {e}")
 
     async def test_connection(self) -> bool:
         """
