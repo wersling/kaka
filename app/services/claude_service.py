@@ -213,7 +213,7 @@ Issue 内容:
             cmd.extend(["-p", prompt])  # 直接传递 prompt
             cmd.extend(["--output-format", "stream-json"])  # 使用流式 JSON 输出
             cmd.extend(["--verbose"])  # 启用详细日志
-            cmd.extend(["--max-turns", str(3)])  # 限制最大对话轮数
+            # cmd.extend(["--max-turns", str(3)])  # 限制最大对话轮数
 
             # 如果配置了跳过权限检查，添加参数
             if self.dangerously_skip_permissions:
@@ -236,8 +236,8 @@ Issue 内容:
             stdin_input = prompt.encode()
 
             try:
-                # 异步写入 stdin 并开始处理输出
-                await asyncio.wait_for(
+                # 异步写入 stdin 并获取输出
+                stdout_bytes, stderr_bytes = await asyncio.wait_for(
                     process.communicate(input=stdin_input),
                     timeout=self.timeout,
                 )
@@ -246,15 +246,20 @@ Issue 内容:
                 await process.wait()
                 raise
 
-            # 读取并解析 stream-json 输出
-            stdout_content = (await process.stdout.read()).decode("utf-8", errors="replace")
-            stderr_content = (await process.stderr.read()).decode("utf-8", errors="replace")
-            print(f"STDOUT CONTENT:\n{stdout_content}\n")
+            # 解码输出
+            stdout_content = stdout_bytes.decode("utf-8", errors="replace")
+            stderr_content = stderr_bytes.decode("utf-8", errors="replace")
+
+            # 记录输出摘要
+            lines_count = len(stdout_content.strip().split("\n")) if stdout_content.strip() else 0
+            self.logger.debug(f"stdout 行数: {lines_count}, 长度: {len(stdout_content)}")
+
             # 解析 stream-json 行
             assistant_messages = []
             result_message = None
             tools_used = []
             parsing_errors = []
+            message_type_counts = {}
 
             for line in stdout_content.strip().split("\n"):
                 if not line.strip():
@@ -264,6 +269,9 @@ Issue 内容:
                     msg = json.loads(line)
                     msg_type = msg.get("type")
 
+                    # 统计消息类型
+                    message_type_counts[msg_type] = message_type_counts.get(msg_type, 0) + 1
+
                     if msg_type == "assistant":
                         # 提取 assistant 消息的文本内容
                         message = msg.get("message", {})
@@ -271,25 +279,39 @@ Issue 内容:
 
                         for block in content_blocks:
                             if block.get("type") == "text":
-                                assistant_messages.append(block.get("text", ""))
+                                text = block.get("text", "")
+                                assistant_messages.append(text)
+                                self.logger.debug(f"提取到 assistant 文本块，长度: {len(text)}")
                             elif block.get("type") == "tool_use":
                                 tools_used.append({
                                     "name": block.get("name"),
                                     "id": block.get("id"),
                                 })
+                                self.logger.debug(f"提取到 tool_use: {block.get('name')}")
 
                     elif msg_type == "result":
                         # 最终结果消息
                         result_message = msg
+                        self.logger.debug(f"提取到 result 消息")
 
                     elif msg_type == "error":
                         # 错误消息
                         error_msg = msg.get("message", "Unknown error")
                         parsing_errors.append(f"Error: {error_msg}")
+                        self.logger.error(f"错误消息: {error_msg}")
 
                 except json.JSONDecodeError as e:
                     parsing_errors.append(f"JSON decode error: {e}")
                     self.logger.warning(f"无法解析 JSON 行: {line[:200]}")
+
+            # 记录解析统计
+            self.logger.info(
+                f"解析 stream-json 完成: "
+                f"消息类型统计={message_type_counts}, "
+                f"assistant 文本块={len(assistant_messages)}, "
+                f"tool_use={len(tools_used)}, "
+                f"解析错误={len(parsing_errors)}"
+            )
 
             # 记录错误输出
             if stderr_content:
@@ -301,6 +323,7 @@ Issue 内容:
 
             # 聚合 assistant 输出
             output = "\n".join(assistant_messages).strip()
+            self.logger.info(f"聚合 assistant 输出: 文本块数={len(assistant_messages)}, 总长度={len(output)}")
 
             # 提取结果信息
             result_data = {
@@ -329,7 +352,7 @@ Issue 内容:
 
             # 记录输出摘要
             if output:
-                self.logger.debug(f"Claude 输出:\n{output[:2000]}...")
+                self.logger.debug(f"Claude 输出:\n{output[:]}...")
 
             return result_data
 

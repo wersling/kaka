@@ -99,6 +99,24 @@ class GitHubService(LoggerMixin):
                 f"(关联 Issue #{issue_number})"
             )
 
+            # 检查分支之间是否有差异
+            try:
+                comparison = repo.compare(base, branch_name)
+                commits_ahead = list(comparison.commits)
+
+                if not commits_ahead:
+                    error_msg = (
+                        f"分支 '{branch_name}' 与 '{base}' 之间没有新的提交。"
+                        f"可能原因：1) Claude 没有产生任何变更，2) 变更已经在目标分支中"
+                    )
+                    self.logger.error(error_msg)
+                    raise Exception(error_msg)
+
+                self.logger.info(f"检测到 {len(commits_ahead)} 个新提交")
+            except GithubException as e:
+                # 如果比较失败，仍然尝试创建 PR（可能是新分支）
+                self.logger.warning(f"无法比较分支差异: {e}")
+
             # 构建 PR 标题和描述
             pr_title = f"Kaka: {issue_title}"
             pr_body = self._build_pr_body(
@@ -393,3 +411,44 @@ class GitHubService(LoggerMixin):
         except Exception as e:
             self.logger.error(f"获取限额信息失败: {e}", exc_info=True)
             return {}
+
+    def get_pulls_for_branch(self, branch_name: str) -> list[dict[str, any]]:
+        """
+        获取指定分支的所有 PR
+
+        Args:
+            branch_name: 分支名
+
+        Returns:
+            list: PR 列表，每个 PR 包含 pr_number, html_url, state, title
+        """
+        try:
+            repo = self._get_repo()
+            pulls = repo.get_pulls(
+                state="all",  # 获取所有状态的 PR
+                head=f"{repo.owner.login}:{branch_name}",
+            )
+
+            prs = []
+            for pr in pulls:
+                prs.append({
+                    "pr_number": pr.number,
+                    "html_url": pr.html_url,
+                    "url": pr.url,
+                    "state": pr.state,
+                    "title": pr.title,
+                })
+
+            if prs:
+                self.logger.info(f"找到 {len(prs)} 个 PR 关联分支 '{branch_name}'")
+            else:
+                self.logger.debug(f"没有找到 PR 关联分支 '{branch_name}'")
+
+            return prs
+
+        except GithubException as e:
+            self.logger.error(
+                f"获取 PR 列表失败 (分支 '{branch_name}'): {e}",
+                exc_info=True,
+            )
+            return []
