@@ -412,53 +412,74 @@ class WebhookHandler(LoggerMixin):
                 self.logger.warning("未找到 AI 开发总结，PR 描述将不包含详细信息")
                 task_service.add_task_log(task_id, "WARNING", "未找到 AI 开发总结")
 
-            pr_info = self.github_service.create_pull_request(
-                branch_name=branch_name,
-                issue_number=issue_number,
-                issue_title=issue_title,
-                issue_body=issue_body,
-                execution_time=execution_time,
-                development_summary=development_summary,
-            )
-
-            # 检查 PR 创建是否成功（返回 None 表示没有提交）
-            if not pr_info:
-                error_msg = "未创建 PR：分支与主分支之间没有代码提交差异，可能 Claude CLI 执行失败或未产生代码变更"
-
-                self.logger.warning(f"⚠️  {error_msg}")
-                task_service.add_task_log(task_id, "WARNING", error_msg)
-
-                # 更新任务状态为失败
-                task_service.update_task_status(
-                    task_id,
-                    TaskStatus.FAILED,
-                    error_message=error_msg,
-                    success=False,
-                    execution_time=execution_time,
-                )
-
-                # 通知用户
-                self.github_service.add_comment_to_issue(
-                    issue_number=issue_number,
-                    comment=f"⚠️  AI 开发未完成: {error_msg}\n\n请检查 Claude CLI 的执行日志以了解详细原因。",
-                )
-
-                # 返回失败结果
-                return TaskResult(
-                    success=False,
-                    task_id=task_id,
+            try:
+                pr_info = self.github_service.create_pull_request(
                     branch_name=branch_name,
-                    error_message=error_msg,
+                    issue_number=issue_number,
+                    issue_title=issue_title,
+                    issue_body=issue_body,
+                    execution_time=execution_time,
+                    development_summary=development_summary,
                 )
 
-            self.logger.info(
-                f"✅ PR 创建成功: #{pr_info['pr_number']} - {pr_info['html_url']}"
-            )
-            task_service.add_task_log(
-                task_id,
-                "INFO",
-                f"✅ PR 创建成功: #{pr_info['pr_number']} - {pr_info['html_url']}"
-            )
+                self.logger.info(
+                    f"✅ PR 创建成功: #{pr_info['pr_number']} - {pr_info['html_url']}"
+                )
+                task_service.add_task_log(
+                    task_id,
+                    "INFO",
+                    f"✅ PR 创建成功: #{pr_info['pr_number']} - {pr_info['html_url']}"
+                )
+            except Exception as pr_error:
+                # 检查是否是 "No commits between" 错误
+                error_str = str(pr_error)
+                if "No commits between" in error_str or "没有新的提交" in error_str:
+                    # 这种情况下，分支可能已经存在且没有新变更
+                    # 尝试检查是否已经存在 PR
+                    self.logger.warning(f"PR 创建失败（无新提交），尝试检查现有 PR")
+
+                    # 尝试获取已存在的 PR
+                    existing_prs = self.github_service.get_pulls_for_branch(branch_name)
+                    if existing_prs:
+                        pr_info = existing_prs[0]
+                        self.logger.info(f"找到已存在的 PR: #{pr_info['pr_number']}")
+                        task_service.add_task_log(
+                            task_id,
+                            "INFO",
+                            f"找到已存在的 PR: #{pr_info['pr_number']}"
+                        )
+                    else:
+                        # 真的没有可创建的内容，返回部分成功的结果
+                        warning_msg = (
+                            f"⚠️ AI 开发完成，但没有产生新的代码变更。"
+                            f"分支 '{branch_name}' 可能已经与目标分支同步。"
+                        )
+                        self.logger.warning(warning_msg)
+                        task_service.add_task_log(task_id, "WARNING", warning_msg)
+
+                        # 向 Issue 发送警告
+                        self.github_service.add_comment_to_issue(
+                            issue_number=issue_number,
+                            comment=warning_msg,
+                        )
+
+                        # 更新任务状态为完成（但没有 PR）
+                        task_service.update_task_status(
+                            task_id,
+                            TaskStatus.COMPLETED,
+                            success=True,
+                            execution_time=execution_time,
+                        )
+
+                        return TaskResult(
+                            success=True,  # 标记为成功，因为没有代码错误
+                            task_id=task_id,
+                            branch_name=branch_name,
+                            details={"warning": "No new commits", "execution_time": execution_time},
+                        )
+                else:
+                    # 其他错误，继续抛出
+                    raise pr_error
 
             # 在 Issue 中评论 PR 链接（非阻塞）
             execution_time = claude_result.get("execution_time", 0)
