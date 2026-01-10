@@ -184,56 +184,51 @@ Issue 内容:
 
     async def _execute_claude(self, prompt: str) -> dict[str, any]:
         """
-        执行 Claude Code CLI
+        执行 Claude Code CLI (使用 stream-json 格式)
 
         Args:
             prompt: 发送给 Claude 的提示词
 
         Returns:
             dict: 执行结果
+                - success (bool): 是否成功
+                - output (str): AI 输出内容（从 assistant 消息聚合）
+                - errors (str): 错误输出
+                - returncode (int): 返回码
+                - result (dict): 完整的 result 消息
+                - tools_used (list): 使用的工具列表
+                - cost_usd (float): API 调用成本
+                - duration_ms (int): 执行时长（毫秒）
+                - num_turns (int): 对话轮数
 
         Raises:
             asyncio.TimeoutError: 执行超时
             Exception: 执行失败
         """
-        prompt_file = None
+        import json
+
         try:
-            # 将 prompt 写入临时文件
-            import tempfile
-            import os
-
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                suffix=".txt",
-                delete=False,
-            ) as f:
-                f.write(prompt)
-                prompt_file = f.name
-
-            self.logger.debug(f"Prompt 已写入临时文件: {prompt_file}")
-
             # 构建命令
-            cmd = [
-                self.claude_cli_path,
-            ]
+            cmd = [self.claude_cli_path]
+            cmd.extend(["-p", prompt])  # 直接传递 prompt
+            cmd.extend(["--output-format", "stream-json"])  # 使用流式 JSON 输出
+            cmd.extend(["--verbose"])  # 启用详细日志
+            cmd.extend(["--max-turns", str(3)])  # 限制最大对话轮数
 
             # 如果配置了跳过权限检查，添加参数
             if self.dangerously_skip_permissions:
                 cmd.append("--dangerously-skip-permissions")
                 self.logger.debug("已启用 --dangerously-skip-permissions 模式")
 
-            # 如果有 prompt 文件，添加到命令
-            # 注意：工作目录通过 subprocess 的 cwd 参数设置
-            # 这里假设 claude CLI 接受从 stdin 读取
-
             self.logger.debug(f"执行命令: {' '.join(cmd)}")
 
             # 执行命令
             process = await asyncio.create_subprocess_exec(
                 *cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                limit=1024 * 1024 * 512,  # 512MB 缓冲区
                 cwd=str(self.repo_path),
             )
 
@@ -241,7 +236,8 @@ Issue 内容:
             stdin_input = prompt.encode()
 
             try:
-                stdout, stderr = await asyncio.wait_for(
+                # 异步写入 stdin 并开始处理输出
+                await asyncio.wait_for(
                     process.communicate(input=stdin_input),
                     timeout=self.timeout,
                 )
@@ -250,22 +246,92 @@ Issue 内容:
                 await process.wait()
                 raise
 
-            # 解码输出
-            output = stdout.decode("utf-8", errors="replace")
-            errors = stderr.decode("utf-8", errors="replace")
+            # 读取并解析 stream-json 输出
+            stdout_content = (await process.stdout.read()).decode("utf-8", errors="replace")
+            stderr_content = (await process.stderr.read()).decode("utf-8", errors="replace")
+            print(f"STDOUT CONTENT:\n{stdout_content}\n")
+            # 解析 stream-json 行
+            assistant_messages = []
+            result_message = None
+            tools_used = []
+            parsing_errors = []
 
-            # 记录输出
-            if output:
-                self.logger.debug(f"Claude 输出:\n{output[:500]}")
-            if errors:
-                self.logger.warning(f"Claude 错误:\n{errors[:500]}")
+            for line in stdout_content.strip().split("\n"):
+                if not line.strip():
+                    continue
 
-            return {
+                try:
+                    msg = json.loads(line)
+                    msg_type = msg.get("type")
+
+                    if msg_type == "assistant":
+                        # 提取 assistant 消息的文本内容
+                        message = msg.get("message", {})
+                        content_blocks = message.get("content", [])
+
+                        for block in content_blocks:
+                            if block.get("type") == "text":
+                                assistant_messages.append(block.get("text", ""))
+                            elif block.get("type") == "tool_use":
+                                tools_used.append({
+                                    "name": block.get("name"),
+                                    "id": block.get("id"),
+                                })
+
+                    elif msg_type == "result":
+                        # 最终结果消息
+                        result_message = msg
+
+                    elif msg_type == "error":
+                        # 错误消息
+                        error_msg = msg.get("message", "Unknown error")
+                        parsing_errors.append(f"Error: {error_msg}")
+
+                except json.JSONDecodeError as e:
+                    parsing_errors.append(f"JSON decode error: {e}")
+                    self.logger.warning(f"无法解析 JSON 行: {line[:200]}")
+
+            # 记录错误输出
+            if stderr_content:
+                self.logger.warning(f"Claude stderr:\n{stderr_content[:5000]}")
+
+            # 记录解析错误
+            if parsing_errors:
+                self.logger.warning(f"解析错误: {parsing_errors[:5]}")
+
+            # 聚合 assistant 输出
+            output = "\n".join(assistant_messages).strip()
+
+            # 提取结果信息
+            result_data = {
                 "success": process.returncode == 0,
                 "output": output,
-                "errors": errors,
+                "errors": stderr_content,
                 "returncode": process.returncode,
+                "result": result_message,
+                "tools_used": tools_used,
             }
+
+            # 从 result 消息中提取额外信息
+            if result_message:
+                result_data.update({
+                    "cost_usd": result_message.get("cost_usd", 0.0),
+                    "duration_ms": result_message.get("duration_ms", 0),
+                    "num_turns": result_message.get("num_turns", 0),
+                    "session_id": result_message.get("session_id", ""),
+                })
+                self.logger.info(
+                    f"Claude 执行完成: "
+                    f"成本=${result_message.get('cost_usd', 0):.4f}, "
+                    f"时长={result_message.get('duration_ms', 0)}ms, "
+                    f"轮数={result_message.get('num_turns', 0)}"
+                )
+
+            # 记录输出摘要
+            if output:
+                self.logger.debug(f"Claude 输出:\n{output[:2000]}...")
+
+            return result_data
 
         except asyncio.TimeoutError:
             self.logger.error(f"Claude CLI 执行超时（{self.timeout}秒）")
@@ -281,14 +347,7 @@ Issue 内容:
             self.logger.error(f"执行 Claude CLI 失败: {e}", exc_info=True)
             raise
         finally:
-            # 清理临时文件（安全修复：确保敏感prompt被删除）
-            if prompt_file and os.path.exists(prompt_file):
-                try:
-                    os.remove(prompt_file)
-                    self.logger.debug(f"已清理临时文件: {prompt_file}")
-                except Exception as e:
-                    # 记录警告但不要抛出异常（清理失败不影响主流程）
-                    self.logger.warning(f"清理临时文件失败: {e}")
+            self.logger.debug("Claude CLI 执行完成")
 
     async def test_connection(self) -> bool:
         """
