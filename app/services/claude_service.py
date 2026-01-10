@@ -177,9 +177,13 @@ Issue 内容:
                 else:
                     # 非成功，记录错误以便重试
                     last_error = result.get("errors", "Unknown error")
-                    self.logger.warning(
-                        f"尝试 {attempt} 失败: {last_error[:200]}"
-                    )
+                    returncode = result.get("returncode", -1)
+                    # 构建详细的错误消息
+                    if last_error:
+                        error_msg = f"返回码={returncode}, 错误={last_error[:200]}"
+                    else:
+                        error_msg = f"返回码={returncode} (无错误输出)"
+                    self.logger.warning(f"尝试 {attempt} 失败: {error_msg}")
 
             except asyncio.TimeoutError:
                 last_error = f"执行超时（>{self.timeout}秒）"
@@ -363,14 +367,25 @@ Issue 内容:
             self.logger.info(f"聚合 assistant 输出: 文本块数={len(assistant_messages)}, 总长度={len(output)}")
 
             # 提取结果信息
+            # 改进成功判断：即使 returncode 不是 0，如果有有效输出和 result 消息，也判断为成功
+            has_valid_output = bool(output and output.strip())
+            has_result_message = result_message is not None
+            is_success = (process.returncode == 0) or (has_valid_output and has_result_message)
+
             result_data = {
-                "success": process.returncode == 0,
+                "success": is_success,
                 "output": output,
                 "errors": stderr_content,
                 "returncode": process.returncode,
                 "result": result_message,
                 "tools_used": tools_used,
             }
+
+            # 如果返回码不是0但判断为成功，记录警告
+            if is_success and process.returncode != 0:
+                self.logger.warning(
+                    f"进程返回码={process.returncode}，但有有效输出，判断为成功"
+                )
 
             # 从 result 消息中提取额外信息
             if result_message:
@@ -386,6 +401,9 @@ Issue 内容:
                     f"时长={result_message.get('duration_ms', 0)}ms, "
                     f"轮数={result_message.get('num_turns', 0)}"
                 )
+
+            # 记录退出码（调试用）
+            self.logger.debug(f"进程退出码: {process.returncode}")
 
             # 记录输出摘要
             if output:
