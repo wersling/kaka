@@ -370,21 +370,49 @@ Issue 内容:
             # 改进成功判断：即使 returncode 不是 0，如果有有效输出和 result 消息，也判断为成功
             has_valid_output = bool(output and output.strip())
             has_result_message = result_message is not None
-            is_success = (process.returncode == 0) or (has_valid_output and has_result_message)
+
+            # 检查 stderr 中是否包含真正的错误（排除警告信息）
+            has_real_error = False
+            if stderr_content:
+                # 常见的非致命警告模式 - 如果 stderr 只包含这些，不算错误
+                warning_patterns = [
+                    "Pre-flight check is taking longer",
+                    "Run with ANTHROPIC_LOG=debug",
+                    "⚠️",  # 警告符号
+                ]
+                # 检查 stderr 是否只包含警告信息
+                stderr_lines = [line.strip() for line in stderr_content.strip().split('\n') if line.strip()]
+                warning_lines = [line for line in stderr_lines if any(pattern in line for pattern in warning_patterns)]
+
+                # 如果所有 stderr 行都是警告，或者 stderr 很短（1-2行），则不算真错误
+                if len(stderr_lines) > 0:
+                    has_real_error = len(warning_lines) < len(stderr_lines)  # 有非警告的行
+                    # 如果 stderr 内容很多（超过5行），即使包含警告也可能有真错误
+                    if len(stderr_lines) > 5:
+                        has_real_error = True
+
+            is_success = (
+                (process.returncode == 0) or
+                (has_valid_output and has_result_message and not has_real_error)
+            )
 
             result_data = {
                 "success": is_success,
                 "output": output,
-                "errors": stderr_content,
+                "errors": stderr_content if has_real_error else "",  # 只有真错误才放入 errors
                 "returncode": process.returncode,
                 "result": result_message,
                 "tools_used": tools_used,
             }
 
-            # 如果返回码不是0但判断为成功，记录警告
+            # 如果返回码不是0但判断为成功，记录详细信息
             if is_success and process.returncode != 0:
                 self.logger.warning(
                     f"进程返回码={process.returncode}，但有有效输出，判断为成功"
+                )
+            elif has_valid_output and has_result_message and has_real_error:
+                self.logger.warning(
+                    f"虽然有有效输出，但检测到错误，判定为失败"
                 )
 
             # 从 result 消息中提取额外信息
