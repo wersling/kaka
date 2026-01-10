@@ -178,11 +178,21 @@ Issue 内容:
                     # 非成功，记录错误以便重试
                     last_error = result.get("errors", "Unknown error")
                     returncode = result.get("returncode", -1)
+
+                    # 记录完整错误到日志（便于调试）
+                    if last_error and last_error != "Unknown error":
+                        self.logger.error(f"完整错误输出 (尝试 {attempt}): {last_error}")
+
                     # 构建详细的错误消息
                     if last_error:
-                        error_msg = f"返回码={returncode}, 错误={last_error[:200]}"
+                        # 增加截断限制到1000字符，并添加省略标记
+                        error_summary = last_error[:1000]
+                        if len(last_error) > 1000:
+                            error_summary += "... (已截断)"
+                        error_msg = f"返回码={returncode}, 错误={error_summary}"
                     else:
                         error_msg = f"返回码={returncode} (无错误输出)"
+
                     self.logger.warning(f"尝试 {attempt} 失败: {error_msg}")
 
             except asyncio.TimeoutError:
@@ -367,52 +377,111 @@ Issue 内容:
             self.logger.info(f"聚合 assistant 输出: 文本块数={len(assistant_messages)}, 总长度={len(output)}")
 
             # 提取结果信息
-            # 改进成功判断：即使 returncode 不是 0，如果有有效输出和 result 消息，也判断为成功
+            # 收紧成功判断逻辑，避免假阳性
             has_valid_output = bool(output and output.strip())
             has_result_message = result_message is not None
 
             # 检查 stderr 中是否包含真正的错误（排除警告信息）
             has_real_error = False
             if stderr_content:
-                # 常见的非致命警告模式 - 如果 stderr 只包含这些，不算错误
+                # 非致命警告模式
                 warning_patterns = [
                     "Pre-flight check is taking longer",
                     "Run with ANTHROPIC_LOG=debug",
                     "⚠️",  # 警告符号
                 ]
-                # 检查 stderr 是否只包含警告信息
-                stderr_lines = [line.strip() for line in stderr_content.strip().split('\n') if line.strip()]
-                warning_lines = [line for line in stderr_lines if any(pattern in line for pattern in warning_patterns)]
+                # 致命错误模式（包含这些关键词的行被认为是真错误）
+                error_patterns = [
+                    "error",
+                    "failed",
+                    "exception",
+                    "traceback",
+                    "critical",
+                ]
 
-                # 如果所有 stderr 行都是警告，或者 stderr 很短（1-2行），则不算真错误
-                if len(stderr_lines) > 0:
-                    has_real_error = len(warning_lines) < len(stderr_lines)  # 有非警告的行
-                    # 如果 stderr 内容很多（超过5行），即使包含警告也可能有真错误
-                    if len(stderr_lines) > 5:
+                stderr_lines = [
+                    line.strip() for line in stderr_content.strip().split('\n')
+                    if line.strip()
+                ]
+
+                if stderr_lines:
+                    # 统计警告行和错误行
+                    warning_lines = [
+                        line for line in stderr_lines
+                        if any(pattern in line for pattern in warning_patterns)
+                    ]
+                    error_lines = [
+                        line for line in stderr_lines
+                        if any(pattern in line.lower() for pattern in error_patterns)
+                    ]
+
+                    # 如果有任何明确的错误关键词，判定为真错误
+                    if error_lines:
                         has_real_error = True
+                        self.logger.debug(f"检测到错误行: {error_lines[:3]}")
+                    # 否则，如果有非警告的行，也可能是错误
+                    elif len(warning_lines) < len(stderr_lines):
+                        # 如果 stderr 行数较多（>3行）且不全是警告，判定为错误
+                        has_real_error = len(stderr_lines) > 3
 
+            # 收紧的成功判断逻辑
+            # 1. 标准情况：returncode == 0 且有输出
+            # 2. 特殊情况：returncode 在允许范围内 [0,1,2]，且有完整成功信号
+            allowed_returncodes = [0, 1, 2]  # 0=成功, 1=轻微错误, 2=误用shell命令
+            returncode_allowed = process.returncode in allowed_returncodes
+
+            # 检查 result 消息的状态（如果存在）
+            result_status = result_message.get("status", "") if result_message else ""
+            result_indicates_success = (
+                not result_status or  # 无状态字段
+                result_status == "success" or  # 明确成功
+                result_status == "completed"  # 明确完成
+            )
+
+            # 判断成功
             is_success = (
-                (process.returncode == 0) or
-                (has_valid_output and has_result_message and not has_real_error)
+                returncode_allowed and
+                has_valid_output and
+                result_indicates_success and
+                not has_real_error
             )
 
             result_data = {
                 "success": is_success,
                 "output": output,
-                "errors": stderr_content if has_real_error else "",  # 只有真错误才放入 errors
+                "errors": stderr_content if has_real_error else "",
                 "returncode": process.returncode,
                 "result": result_message,
                 "tools_used": tools_used,
             }
 
-            # 如果返回码不是0但判断为成功，记录详细信息
-            if is_success and process.returncode != 0:
+            # 记录判断依据（调试用）
+            if is_success:
+                if process.returncode != 0:
+                    self.logger.warning(
+                        f"⚠️ 非零返回码={process.returncode}，但判定为成功 "
+                        f"(有输出={has_valid_output}, 无错误={not has_real_error}, "
+                        f"result状态={result_status})"
+                    )
+                else:
+                    self.logger.info(
+                        f"✅ 执行成功 (返回码={process.returncode}, "
+                        f"输出长度={len(output)}, 工具数={len(tools_used)})"
+                    )
+            else:
+                # 记录失败原因
+                failure_reasons = []
+                if not returncode_allowed:
+                    failure_reasons.append(f"返回码={process.returncode}不在允许范围")
+                if not has_valid_output:
+                    failure_reasons.append("无有效输出")
+                if not result_indicates_success:
+                    failure_reasons.append(f"result状态={result_status}")
+                if has_real_error:
+                    failure_reasons.append("检测到错误输出")
+
                 self.logger.warning(
-                    f"进程返回码={process.returncode}，但有有效输出，判断为成功"
-                )
-            elif has_valid_output and has_result_message and has_real_error:
-                self.logger.warning(
-                    f"虽然有有效输出，但检测到错误，判定为失败"
+                    f"❌ 判定为失败: {', '.join(failure_reasons)}"
                 )
 
             # 从 result 消息中提取额外信息

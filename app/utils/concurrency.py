@@ -5,6 +5,7 @@
 """
 
 import asyncio
+import threading
 from typing import Optional
 
 from app.utils.logger import get_logger
@@ -23,6 +24,7 @@ class ConcurrencyManager:
     _semaphore: Optional[asyncio.Semaphore] = None
     _max_concurrent: int = 1
     _current_running: int = 0
+    _lock: threading.Lock = threading.Lock()  # 保护计数器的锁
 
     def __new__(cls):
         """单例模式"""
@@ -68,7 +70,8 @@ class ConcurrencyManager:
         会自动增加当前运行计数
         """
         await cls._semaphore.acquire()
-        cls._current_running += 1
+        with cls._lock:  # 原子操作保护计数器
+            cls._current_running += 1
         logger.debug(f"🔓 获取并发许可 (当前运行: {cls._current_running}/{cls._max_concurrent})")
 
     @classmethod
@@ -78,8 +81,9 @@ class ConcurrencyManager:
 
         会自动减少当前运行计数
         """
+        with cls._lock:  # 原子操作保护计数器
+            cls._current_running -= 1
         cls._semaphore.release()
-        cls._current_running -= 1
         logger.debug(f"🔒 释放并发许可 (当前运行: {cls._current_running}/{cls._max_concurrent})")
 
     @classmethod

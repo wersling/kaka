@@ -90,6 +90,9 @@ class GitHubService(LoggerMixin):
         try:
             from app.config import get_config
 
+            # 检查速率限制
+            self._check_rate_limit(min_remaining=100)
+
             config = get_config()
 
             repo = self._get_repo()
@@ -426,6 +429,50 @@ class GitHubService(LoggerMixin):
         except Exception as e:
             self.logger.error(f"获取限额信息失败: {e}", exc_info=True)
             return {}
+
+    def _check_rate_limit(self, min_remaining: int = 100) -> bool:
+        """
+        检查速率限制，如果接近限额则等待
+
+        Args:
+            min_remaining: 最小剩余请求数，默认100
+
+        Returns:
+            bool: 是否有足够的配额
+        """
+        import time
+
+        try:
+            limits = self.get_rate_limit()
+            if not limits:
+                self.logger.warning("无法获取速率限制信息，继续执行")
+                return True
+
+            remaining = limits.get("remaining", 0)
+            reset_time = limits.get("reset", 0)
+            current_time = time.time()
+
+            # 如果剩余请求数不足，等待重置
+            if remaining < min_remaining:
+                wait_time = max(0, reset_time - current_time + 60)  # 额外等待60秒
+
+                if wait_time > 0:
+                    self.logger.warning(
+                        f"⚠️ GitHub API 速率限制即将达到（剩余 {remaining}），"
+                        f"等待 {wait_time:.0f} 秒直到 {time.ctime(reset_time)}"
+                    )
+                    time.sleep(wait_time)
+                    self.logger.info("✅ 速率限制等待完成，继续执行")
+                else:
+                    self.logger.warning(
+                        f"⚠️ GitHub API 速率限制剩余 {remaining}，建议稍后重试"
+                    )
+
+            return remaining >= 10  # 至少保留10次请求
+
+        except Exception as e:
+            self.logger.error(f"检查速率限制失败: {e}", exc_info=True)
+            return True  # 检查失败时继续执行
 
     def get_pulls_for_branch(self, branch_name: str) -> list[dict[str, any]]:
         """
