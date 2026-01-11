@@ -1,4 +1,4 @@
-.PHONY: help install dev webhook-test test lint format clean coverage docker-build docker-run init test-webhook-live trigger test-webhook-status test-webhook-batch
+.PHONY: help install dev webhook-test test lint format clean coverage docker-build docker-run init test-integration-live test-webhook-live trigger test-webhook-status test-webhook-batch
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -90,6 +90,12 @@ coverage: ## 生成测试覆盖率报告
 ## 📈 查看覆盖率（浏览器）
 coverage-open: coverage ## 生成并在浏览器中打开覆盖率报告
 	@open htmlcov/index.html 2>/dev/null || python -m webbrowser htmlcov/index.html
+
+## 🧪 真实环境集成测试
+test-integration-live: ## 运行真实环境集成测试（完整工作流）
+	@echo "$(BLUE)🧪 运行真实环境集成测试...$(NC)"
+	make clean
+	@python scripts/test_integration_live.py --start-service --stop-service
 
 ## 🔍 代码检查
 lint: ## 运行代码检查（flake8）
