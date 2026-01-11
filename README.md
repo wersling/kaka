@@ -1,4 +1,4 @@
-# AI 开发调度服务 (ai-dev-scheduler)
+# Kaka AI Dev - AI 开发调度服务
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
@@ -7,7 +7,15 @@
 [![Tests](https://img.shields.io/badge/tests-395%20passed-success.svg)](https://github.com/your-org/ai-dev-scheduler)
 [![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen.svg)](https://github.com/your-org/ai-dev-scheduler)
 
-> 基于 FastAPI 的自动化开发工作流系统 - 通过 GitHub Webhook 触发 Claude Code CLI 进行 AI 开发，实现从 Issue 到 PR 的完整自动化流程。
+> 🚀 **一键安装，开箱即用** - 通过 GitHub Webhook 触发 Claude Code CLI 进行 AI 开发，实现从 Issue 到 PR 的完整自动化流程。
+
+## ✨ v0.2.0 新功能
+
+- 🎨 **全新 Dashboard** - 美观的任务监控界面
+- ⚙️ **配置向导** - 5 分钟完成配置
+- 🖥️ **CLI 工具** - 命令行管理服务
+- 🔧 **一键安装** - 自动化安装脚本
+- 📊 **实时日志** - SSE 实时日志流
 
 ---
 
@@ -204,152 +212,151 @@ ai-dev-scheduler/
 
 ## 快速开始
 
-### 前置要求
-
-确保您的系统已安装以下软件：
-
-- **Python**: 3.11 或更高版本
-- **Node.js**: 18+ （用于安装 Claude Code CLI）
-- **Git**: 2.0+ （用于版本控制）
-- **pip**: 最新版本
+### 🚀 方式 1：一键安装（推荐）
 
 ```bash
-# 检查 Python 版本
-python3 --version
+# 运行安装脚本
+bash scripts/install.sh
 
-# 检查 Node.js 版本
-node --version
+# 完成后，配置服务
+kaka-dev configure
 
-# 检查 Git 版本
-git --version
+# 启动服务
+kaka-dev start
 ```
 
-### 安装步骤
+### 📋 方式 2：源码运行（开发者）
 
-#### 方式一：使用 Makefile（推荐）
+#### 前置要求
+
+- Python 3.11+
+- Git
+- GitHub 账号
+- Anthropic API Key
+
+#### 安装步骤
 
 ```bash
-# 1. 查看所有可用命令
-make help
+# 1. 克隆项目
+git clone https://github.com/your-org/kaka.git
+cd kaka
 
-# 2. 快速开始（自动安装依赖、验证配置、运行测试）
-make quickstart
+# 2. 创建虚拟环境
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 3. 启动开发服务器
-make dev
+# 3. 安装依赖
+pip install -r requirements.txt
+
+# 4. 配置环境变量（编辑 .env 文件）
+cp .env.example .env
+
+# 5. 启动服务
+kaka-dev start
 ```
 
-#### 方式二：手动安装
+### 🎯 首次使用
 
-##### 1. 克隆项目
+#### 1. 打开配置向导
 
 ```bash
-git clone https://github.com/your-org/ai-dev-scheduler.git
-cd ai-dev-scheduler
+kaka-dev configure
 ```
 
-#### 2. 运行初始化脚本
+服务启动后，访问：
+```
+http://localhost:8000/config
+```
+
+#### 2. 填写配置
+
+在配置向导中填写：
+- **GitHub Token**: [获取地址](https://github.com/settings/tokens)
+- **仓库所有者**: 你的 GitHub 用户名
+- **仓库名称**: 仓库名称
+- **本地仓库路径**: 仓库的绝对路径
+- **Anthropic API Key**: [获取地址](https://console.anthropic.com/)
+
+#### 3. 保存并开始使用
+
+点击"验证并保存"，系统会自动验证所有配置。
+
+### 📊 使用 Dashboard
+
+访问 Dashboard：
+```
+http://localhost:8000/dashboard
+```
+
+**快捷键**：
+- **R** - 刷新页面
+- **C** - 打开配置
+- **W** - 复制 Webhook URL
+- **?** - 显示帮助
+
+### 🔗 配置 GitHub Webhook
+
+#### 1. 复制 Webhook URL
+
+在 Dashboard 点击"📋 复制 Webhook URL"
+
+#### 2. 在 GitHub 创建 Webhook
+
+1. 进入仓库设置 → `Webhooks` → `Add webhook`
+2. 配置：
+   - **Payload URL**: 粘贴刚才复制的 URL
+   - **Content type**: `application/json`
+   - **Secret**: 与 `.env` 中的 `GITHUB_WEBHOOK_SECRET` 一致
+   - **Events**: 选择 `Issues` 和 `Issue comments`
+
+### 🎯 触发 AI 开发
+
+#### 方式 1：标签触发
+
+在 GitHub Issue 中添加 `ai-dev` 标签
+
+#### 方式 2：评论触发
+
+在 GitHub Issue 中评论 `/ai develop`
+
+---
+
+### 📝 常用命令
 
 ```bash
-chmod +x scripts/setup.sh
-./scripts/setup.sh
+# 查看服务状态
+kaka-dev status
+
+# 查看日志
+kaka-dev logs
+
+# 导出配置
+kaka-dev config export
+
+# 导入配置
+kaka-dev config import
+
+# 启动开发服务器（自动重载）
+kaka-dev start --reload
+
+# 查看帮助
+kaka-dev --help
 ```
 
-该脚本会自动：
-- 检查 Python 版本
-- 创建虚拟环境
-- 安装 Python 依赖
-- 创建必要的目录（`logs/`、`config/`）
-- 生成 `.env` 配置文件模板
-- 设置脚本执行权限
-
-#### 3. 安装 Claude Code CLI
+### 🐛 故障排查
 
 ```bash
-npm install -g @anthropic/claude-code
-```
+# 检查端口占用
+lsof -i :8000
 
-验证安装：
+# 查看日志
+kaka-dev logs
 
-```bash
-claude-code --version
-```
+# 查看最近 20 行日志
+tail -n 20 logs/ai-scheduler.log
 
-#### 4. 配置环境变量
-
-##### 方式一：使用交互式配置向导（推荐）
-
-```bash
-python scripts/setup_env.py
-```
-
-交互式向导会引导您完成：
-- ✅ GitHub Token 验证
-- ✅ GitHub 仓库信息配置
-- ✅ Webhook Secret 自动生成
-- ✅ 本地仓库路径验证
-- ✅ Anthropic API Key 验证
-- ✅ ngrok 配置（可选）
-
-详细说明：[scripts/SETUP_ENV.md](scripts/SETUP_ENV.md)
-
-##### 方式二：手动配置
-
-编辑项目根目录下的 `.env` 文件：
-
-```bash
-# GitHub 配置
-GITHUB_WEBHOOK_SECRET=your-webhook-secret-here
-GITHUB_TOKEN=ghp_your-token-here
-GITHUB_REPO_OWNER=your-username
-GITHUB_REPO_NAME=your-repo
-
-# 代码仓库路径（绝对路径）
-REPO_PATH=/path/to/your/local/repo
-
-# Anthropic API Key
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-
-# 可选：基本认证
-BASIC_AUTH_USERNAME=admin
-BASIC_AUTH_PASSWORD=your-secure-password
-```
-
-#### 5. 启动服务
-
-```bash
-# 激活虚拟环境
-source venv/bin/activate
-
-# 启动开发服务器
-./scripts/dev.sh
-```
-
-或直接运行：
-
-```bash
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-#### 6. 验证安装
-
-服务启动后，访问以下 URL：
-
-- **API 文档 (Swagger UI)**: http://localhost:8000/docs
-- **替代文档 (ReDoc)**: http://localhost:8000/redoc
-- **健康检查**: http://localhost:8000/health
-- **根端点**: http://localhost:8000/
-
-预期输出：
-
-```json
-{
-  "service": "AI 开发调度服务",
-  "version": "0.1.0",
-  "status": "running",
-  "docs": "/docs",
-  "health": "/health"
-}
+# 实时查看日志
+tail -f logs/ai-scheduler.log
 ```
 
 ---
@@ -1858,16 +1865,19 @@ SOFTWARE.
 
 ## 更新日志
 
-### v0.2.0 (2026-01-09)
+### v0.2.0 (2026-01-11)
 
-测试和代码质量提升
+MVP Dashboard 和配置向导
 
-- ✅ 补充 300+ 新测试用例
-- ✅ 代码测试覆盖率达到 89%（目标 85%）
-- ✅ 修复 P0/P1 优先级问题
-- ✅ 改进异常处理和日志记录
-- ✅ 统一类型提示
-- ✅ 增强签名验证日志
+- ✨ 新增配置向导 - 5 分钟完成配置
+- ✨ 新增增强版 Dashboard - 更美观的任务监控
+- ✨ 新增 CLI 工具 - `kaka-dev` 命令行工具
+- ✨ 新增一键安装脚本 - 自动化安装
+- ✨ 新增配置 API - 配置验证和管理
+- ✨ 实时日志流 - SSE 实时推送
+- ✨ 快捷键支持 - 提升使用体验
+- ✨ Toast 通知系统 - 友好的用户反馈
+- 📝 完善文档 - 快速启动指南和 API 文档
 
 ### v0.1.0 (2024-01-08)
 
@@ -1881,6 +1891,14 @@ SOFTWARE.
 - ✅ 完整的日志系统
 - ✅ 配置管理
 - ✅ API 文档（Swagger UI）
+
+---
+
+## 📚 更多文档
+
+- [快速启动指南](QUICKSTART.md) - 5 分钟上手
+- [API 文档](API.md) - 完整 API 参考
+- [MVP 方案](docs/mvp-refactor-plan.md) - 技术方案
 
 ---
 
