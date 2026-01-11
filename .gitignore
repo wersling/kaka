@@ -37,6 +37,7 @@ ENV/
 .env
 .env.local
 .env.*.local
+.env.backup
 
 # Logs
 logs/
@@ -45,6 +46,7 @@ logs/
 # Testing
 .pytest_cache/
 .coverage
+coverage.json
 htmlcov/
 .tox/
 

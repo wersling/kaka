@@ -177,14 +177,14 @@ TOTAL                              89%
 
 #### Day 1: 环境准备
 - [x] **0.1 创建项目仓库**
-  - 在 GitHub 创建私有仓库 `ai-dev-scheduler`
+  - 在 GitHub 创建私有仓库 `kaka`
   - 初始化本地 git 仓库
   - 配置 `.gitignore`（Python 标准配置）
   - 创建初始分支结构（main, develop）
 
 - [x] **0.2 创建项目目录结构**
   ```bash
-  ai-dev-scheduler/
+  kaka/
   ├── app/
   │   ├── __init__.py
   │   ├── main.py
@@ -770,7 +770,7 @@ TOTAL                              89%
 
 ### 外部服务
 - ✅ **GitHub**: 仓库和 Personal Access Token
-- ✅ **Claude API**: Anthropic API Key
+- ✅ **Claude Code CLI**: 使用自己的配置文件（~/.claude/config.json）
 - ❌ **ngrok**: 开发测试用（待配置）
 
 ### 开发工具
@@ -871,7 +871,7 @@ TOTAL                              89%
 ### 问题反馈
 - **GitHub Issues**: 项目 Issues 页面
 - **邮件**: support@example.com
-- **Slack**: #ai-dev-scheduler 频道
+- **Slack**: #kaka 频道
 
 ### 紧急联系
 - **技术负责人**: tech-lead@example.com

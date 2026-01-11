@@ -123,7 +123,6 @@ def mock_env_vars():
         "GITHUB_REPO_OWNER": "testowner",
         "GITHUB_REPO_NAME": "testrepo",
         "REPO_PATH": "/tmp/test_repo",
-        "ANTHROPIC_API_KEY": "sk-ant-test-key-12345",
     }
 
     # 设置环境变量

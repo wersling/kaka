@@ -75,6 +75,18 @@ class WebhookHandler(LoggerMixin):
         sanitized_data = sanitize_log_data(data)
         self.logger.debug(f"事件数据: {sanitized_data}")
 
+        # 常见的第三方/不需要处理的事件（使用 DEBUG 级别）
+        IGNORED_EVENT_TYPES = {
+            "check_run",  # CI 检查（Vercel、GitHub Actions 等）
+            "check_suite",  # CI 检查套件
+            "status",  # 状态更新
+            "push",  # 代码推送
+            "pull_request",  # PR 事件（我们通过 issue 评论处理）
+            "pull_request_review",  # PR 审查
+            "deployment",  # 部署状态
+            "workflow_run",  # GitHub Actions 工作流
+        }
+
         try:
             # 路由到对应的处理器
             if event_type == "issues":
@@ -88,7 +100,12 @@ class WebhookHandler(LoggerMixin):
                     task_id="ping",
                     details={"message": "pong"},
                 )
+            elif event_type in IGNORED_EVENT_TYPES:
+                # 对于已知的忽略事件，使用 DEBUG 级别
+                self.logger.debug(f"忽略不需要处理的事件类型: {event_type}")
+                return None
             else:
+                # 对于真正未知的事件，使用 WARNING 级别
                 self.logger.warning(f"不支持的事件类型: {event_type}")
                 return None
 

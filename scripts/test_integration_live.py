@@ -466,7 +466,6 @@ class IntegrationTest:
             "GITHUB_REPO_OWNER",
             "GITHUB_REPO_NAME",
             "REPO_PATH",
-            "ANTHROPIC_API_KEY"
         ]
 
         missing_vars = []

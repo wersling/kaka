@@ -1,4 +1,4 @@
-# AI 开发调度服务 (ai-dev-scheduler)
+# AI 开发调度服务 (kaka)
 
 ## 项目概述
 
@@ -19,7 +19,7 @@ AI 开发调度服务是一个基于 Python 的自动化开发工作流系统，
 ## 项目结构
 
 ```
-ai-dev-scheduler/
+kaka/
 ├── app/
 │   ├── main.py                 # FastAPI 应用入口
 │   ├── config.py               # 配置管理
@@ -81,7 +81,6 @@ GITHUB_TOKEN=ghp_your-token-here
 GITHUB_REPO_OWNER=your-username
 GITHUB_REPO_NAME=your-repo
 REPO_PATH=/path/to/your/local/repo
-ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
 ### GitHub Webhook 配置

@@ -114,9 +114,6 @@ GITHUB_REPO_NAME=your-repo
 # 代码仓库路径
 REPO_PATH=/path/to/your/local/repo
 
-# Anthropic API Key (Claude Code 需要)
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-
 # 基本认证（可选）
 BASIC_AUTH_USERNAME=admin
 BASIC_AUTH_PASSWORD=your-secure-password
@@ -181,7 +178,6 @@ echo "  配置向导会帮助您设置："
 echo "    • GitHub Token、仓库信息"
 echo "    • GitHub Webhook Secret（自动生成）"
 echo "    • 本地代码仓库路径"
-echo "    • Anthropic API Key"
 echo "    • ngrok 配置（可选）"
 echo ""
 read -p "是否运行配置向导？ [Y/n]: " -n 1 -r

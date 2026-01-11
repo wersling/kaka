@@ -389,22 +389,6 @@ class TestAPIKeyLeakage:
         # 确保所有 API 响应都被过滤
         pass
 
-    def test_anthropic_key_not_exposed(self):
-        """
-        测试：Anthropic API 密钥不应该暴露
-
-        场景：任何日志、响应或错误消息
-        期望：Anthropic 密钥被完全隐藏
-        严重性：P0
-        """
-        # 测试环境变量不被直接暴露
-        anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-
-        # 如果存在，不应该在日志或响应中出现
-        # 这需要在实际的运行时测试中验证
-        if anthropic_key:
-            assert anthropic_key not in str(os.environ.__dict__)
-
     def test_webhook_secret_not_in_http_headers(self):
         """
         测试：Webhook 密钥不应该在 HTTP 响应头中返回
@@ -577,29 +561,11 @@ class TestResponseDataLeakage:
 class TestThirdPartyIntegrationLeakage:
     """测试第三方服务集成中的信息泄露"""
 
-    def test_claude_api_key_not_logged(self, caplog):
-        """
-        测试：Claude API 密钥不应该出现在日志中
+    # ANTHROPIC_API_KEY 已从项目中移除
+    # Claude Code CLI 使用自己的配置文件
 
-        场景：调用 Claude Code CLI
-        期望：日志不包含完整的 API 密钥
-        严重性：P0
-        """
-        api_key = os.getenv("ANTHROPIC_API_KEY", "test_key_123")
-
-        with caplog.at_level("DEBUG"):
-            from app.utils.logger import get_logger
-
-            logger = get_logger(__name__)
-
-            # 不应该记录完整的 API 密钥
-            logger.debug(f"Using API key: {api_key[:10]}...")
-
-        # 检查日志不包含完整密钥
-        for record in caplog.records:
-            assert api_key not in record.message
-            assert "test_key_123" not in record.message
-
+    # TODO: 添加其他第三方集成的安全测试
+    # 例如：GitHub API 调用的日志记录等
 
 # =============================================================================
 # 临时文件和缓存泄露测试

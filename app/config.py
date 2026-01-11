@@ -10,8 +10,12 @@ from pathlib import Path
 from typing import Any, Optional
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+load_dotenv()
 
 
 class ServerConfig(BaseModel):
@@ -35,11 +39,19 @@ class GitHubConfig(BaseModel):
 
     @field_validator("webhook_secret", "token", mode="before")
     @classmethod
-    def validate_required_env(cls, v: str) -> str:
+    def validate_required_env(cls, v: str, info: dict) -> str:
         """验证必需的环境变量"""
+        field_name = info.field_name
         if not v or v.startswith("${"):
+            # 提供更友好的错误消息，包含字段名映射
+            field_display_name = {
+                "webhook_secret": "GITHUB_WEBHOOK_SECRET",
+                "token": "GITHUB_TOKEN",
+            }.get(field_name, field_name)
+
             raise ValueError(
-                "必需的环境变量未设置。请检查 .env 文件中的配置。"
+                f"{field_display_name} 未配置或为空。"
+                f"请在 .env 文件中设置 {field_display_name} 环境变量。"
             )
         return v
 
@@ -60,6 +72,11 @@ class RepositoryConfig(BaseModel):
     @classmethod
     def validate_path(cls, v: str) -> Path:
         """验证仓库路径"""
+        if not v or v.startswith("${"):
+            raise ValueError(
+                "REPO_PATH 未配置。"
+                "请在 .env 文件中设置 REPO_PATH 环境变量。"
+            )
         path = Path(v).expanduser().resolve()
         if not path.exists():
             raise ValueError(f"仓库路径不存在: {path}")
@@ -105,7 +122,7 @@ class LoggingConfig(BaseModel):
     backup_count: int = 5
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     console: bool = True
-    json: bool = False
+    json_output: bool = Field(default=False, alias="json")
 
     @field_validator("level")
     @classmethod
