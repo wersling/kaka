@@ -264,9 +264,11 @@ app.include_router(health_router, tags=["Health"])
 from app.api.tasks import router as tasks_router
 from app.api.dashboard import router as dashboard_router
 from app.api.logs import router as logs_router
+from app.api.config import router as config_router
 app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
 app.include_router(dashboard_router, tags=["Dashboard"])
 app.include_router(logs_router, prefix="/api", tags=["Logs"])
+app.include_router(config_router, tags=["Config"])
 
 
 # 设置统一的异常处理器

@@ -52,6 +52,7 @@ Repository = "https://github.com/your-org/ai-dev-scheduler"
 Documentation = "https://github.com/your-org/ai-dev-scheduler/docs"
 
 [project.scripts]
+kaka-dev = "app.cli:cli"
 ai-scheduler = "app.main:main"
 
 # Black 配置

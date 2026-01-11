@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaka AI Dev - 任务监控</title>
+    <style>
+        :root {
+            /* 浅色主题 */
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f9fafb;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --text-tertiary: #4b5563;
+            --text-muted: #9ca3af;
+            --border-color: #e5e7eb;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --shadow-hover: rgba(0, 0, 0, 0.15);
+            --input-bg: #ffffff;
+            --input-border: #dddddd;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #242424;
+            --bg-tertiary: #2a2a2a;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --text-tertiary: #d1d5db;
+            --text-muted: #6b7280;
+            --border-color: #374151;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --shadow-hover: rgba(0, 0, 0, 0.4);
+            --input-bg: #2a2a2a;
+            --input-border: #4b5563;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-primary);
+            padding: 20px;
+            transition: background 0.3s ease;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 顶部栏增强 */
+        .dashboard-header {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px var(--shadow-color);
+            transition: background 0.3s ease;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .header-left h1 {
+            font-size: 28px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .header-left p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-dot.success { background: var(--success); }
+        .status-dot.warning { background: var(--warning); }
+        .status-dot.error { background: var(--error); }
+
+        .status-text {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover { transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+
+        .btn-primary {
+            background: var(--info);
+            color: white;
+        }
+
+        .btn-primary:hover { background: #2563eb; }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover { background: var(--border-color); }
+
+        .btn-help {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+        }
+
+        /* 统计卡片 */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px var(--shadow-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--shadow-hover);
+        }
+
+        .stat-card h3 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .stat-card.total .value { color: var(--text-primary); }
+        .stat-card.running .value { color: var(--info); }
+        .stat-card.completed .value { color: var(--success); }
+        .stat-card.failed .value { color: var(--error); }
+
+        /* Toast 通知 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px var(--shadow-hover);
+            border-left: 4px solid var(--info);
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+        }
+
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--error); }
+        .toast.warning { border-left-color: var(--warning); }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* 快捷键提示 */
+        .shortcuts-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .shortcuts-modal.active { display: flex; }
+
+        .shortcuts-content {
+            background: var(--bg-secondary);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .shortcuts-content h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .shortcut-key {
+            background: var(--bg-tertiary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid var(--border-color);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .header-top {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header-right {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部栏 -->
+        <div class="dashboard-header">
+            <div class="header-top">
+                <div class="header-left">
+                    <h1>🎯 Kaka AI Dev</h1>
+                    <p>AI 开发调度服务 - 实时监控任务执行状态</p>
+                </div>
+                <div class="header-right">
+                    <div class="status-indicator" id="statusIndicator">
+                        <span class="status-dot"></span>
+                        <span class="status-text">检查中...</span>
+                    </div>
+                    <button class="btn btn-secondary" onclick="copyWebhookURL()">
+                        📋 复制 Webhook URL
+                    </button>
+                    <button class="btn btn-secondary" onclick="openConfigWizard()">
+                        ⚙️ 配置
+                    </button>
+                    <button class="btn btn-help" onclick="showShortcuts()">?</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="stats" id="stats">
+            <div class="stat-card total">
+                <h3>总任务</h3>
+                <div class="value" id="total-count">-</div>
+            </div>
+            <div class="stat-card running">
+                <h3>运行中</h3>
+                <div class="value" id="running-count">-</div>
+            </div>
+            <div class="stat-card completed">
+                <h3>已完成</h3>
+                <div class="value" id="completed-count">-</div>
+            </div>
+            <div class="stat-card failed">
+                <h3>失败</h3>
+                <div class="value" id="failed-count">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- 快捷键提示模态框 -->
+    <div class="shortcuts-modal" id="shortcutsModal" onclick="closeShortcuts(event)">
+        <div class="shortcuts-content" onclick="event.stopPropagation()">
+            <h2>⌨️ 快捷键</h2>
+            <div class="shortcut-item">
+                <span>刷新页面</span>
+                <span class="shortcut-key">R</span>
+            </div>
+            <div class="shortcut-item">
+                <span>打开配置</span>
+                <span class="shortcut-key">C</span>
+            </div>
+            <div class="shortcut-item">
+                <span>复制 Webhook URL</span>
+                <span class="shortcut-key">W</span>
+            </div>
+            <div class="shortcut-item">
+                <span>关闭模态框</span>
+                <span class="shortcut-key">ESC</span>
+            </div>
+            <button class="btn btn-primary" onclick="closeShortcuts()" style="margin-top: 20px; width: 100%;">
+                关闭
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 配置状态检查
+        async function checkConfigStatus() {
+            try {
+                const response = await fetch('/api/config/status');
+                const status = await response.json();
+
+                const indicator = document.getElementById('statusIndicator');
+                if (status.configured) {
+                    indicator.innerHTML = '<span class="status-dot success"></span><span class="status-text">✓ 配置正常</span>';
+                } else {
+                    indicator.innerHTML = '<span class="status-dot warning"></span><span class="status-text">需要配置</span>';
+                    // 延迟显示配置向导
+                    setTimeout(() => {
+                        showToast('请先完成配置', 'warning');
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('配置状态检查失败:', error);
+            }
+        }
+
+        // 复制 Webhook URL
+        async function copyWebhookURL() {
+            try {
+                const response = await fetch('/api/config/webhook-url');
+                const data = await response.json();
+
+                await navigator.clipboard.writeText(data.url);
+                showToast('✅ Webhook URL 已复制到剪贴板', 'success');
+            } catch (error) {
+                showToast('❌ 复制失败: ' + error.message, 'error');
+            }
+        }
+
+        // 打开配置向导
+        function openConfigWizard() {
+            window.location.href = '/config';
+        }
+
+        // 显示快捷键
+        function showShortcuts() {
+            document.getElementById('shortcutsModal').classList.add('active');
+        }
+
+        // 关闭快捷键
+        function closeShortcuts(event) {
+            if (!event || event.target === document.getElementById('shortcutsModal')) {
+                document.getElementById('shortcutsModal').classList.remove('active');
+            }
+        }
+
+        // Toast 通知
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            // 如果在输入框中，不触发快捷键
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            switch (e.key.toUpperCase()) {
+                case 'R':
+                    e.preventDefault();
+                    location.reload();
+                    break;
+                case 'C':
+                    e.preventDefault();
+                    openConfigWizard();
+                    break;
+                case 'W':
+                    e.preventDefault();
+                    copyWebhookURL();
+                    break;
+                case '?':
+                    e.preventDefault();
+                    showShortcuts();
+                    break;
+                case 'ESCAPE':
+                    closeShortcuts();
+                    break;
+            }
+        });
+
+        // 加载统计数据
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/tasks/stats');
+                const stats = await response.json();
+
+                document.getElementById('total-count').textContent = stats.total || 0;
+                document.getElementById('running-count').textContent = stats.running || 0;
+                document.getElementById('completed-count').textContent = stats.completed || 0;
+                document.getElementById('failed-count').textContent = stats.failed || 0;
+            } catch (error) {
+                console.error('加载统计失败:', error);
+            }
+        }
+
+        // 初始化
+        checkConfigStatus();
+        loadStats();
+
+        // 自动刷新统计（每 10 秒）
+        setInterval(loadStats, 10000);
+    </script>
+</body>
+</html>
