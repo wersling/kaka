@@ -201,9 +201,9 @@ class GitService(LoggerMixin):
                 for file_path in self.repo.untracked_files:
                     try:
                         self.repo.index.add(file_path)
-                    except Exception:
-                        # 忽略无法添加的文件（如 .gitignore 中的文件）
-                        pass
+                    except (OSError, PermissionError, git.GitError):
+                        # 忽略无法添加的文件（如 .gitignore 中的文件或权限问题）
+                        self.logger.debug(f"跳过无法添加的文件: {file_path}")
             else:
                 # 不添加新变更，只检查是否有已暂存的变更
                 if not self.repo.index.diff("HEAD"):

@@ -226,7 +226,7 @@ def get_cors_origins() -> list[str]:
         from app.config import get_config
         config = get_config()
         return config.security.cors_origins
-    except Exception:
+    except (AttributeError, ImportError, RuntimeError):
         # 如果配置未加载，使用默认的本地开发地址
         return ["http://localhost:3000", "http://localhost:8000"]
 

@@ -143,7 +143,7 @@ async def test_concurrency_manager():
     print(f"   📊 acquire 后: {stats}")
     assert stats["current_running"] == 1
 
-    release_concurrency()
+    await release_concurrency()
     stats = get_concurrency_stats()
     print(f"   📊 release 后: {stats}")
     assert stats["current_running"] == 0

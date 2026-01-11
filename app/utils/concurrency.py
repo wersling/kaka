@@ -5,7 +5,6 @@
 """
 
 import asyncio
-import threading
 from typing import Optional
 
 from app.utils.logger import get_logger
@@ -24,7 +23,7 @@ class ConcurrencyManager:
     _semaphore: Optional[asyncio.Semaphore] = None
     _max_concurrent: int = 1
     _current_running: int = 0
-    _lock: threading.Lock = threading.Lock()  # 保护计数器的锁
+    _lock: asyncio.Lock = asyncio.Lock()  # 保护计数器的锁（异步锁）
 
     def __new__(cls):
         """单例模式"""
@@ -70,18 +69,18 @@ class ConcurrencyManager:
         会自动增加当前运行计数
         """
         await cls._semaphore.acquire()
-        with cls._lock:  # 原子操作保护计数器
+        async with cls._lock:  # 异步锁保护计数器
             cls._current_running += 1
         logger.debug(f"🔓 获取并发许可 (当前运行: {cls._current_running}/{cls._max_concurrent})")
 
     @classmethod
-    def release(cls) -> None:
+    async def release(cls) -> None:
         """
         释放并发许可
 
         会自动减少当前运行计数
         """
-        with cls._lock:  # 原子操作保护计数器
+        async with cls._lock:  # 异步锁保护计数器
             # 确保计数器不会变成负数（防御性编程）
             if cls._current_running > 0:
                 cls._current_running -= 1
@@ -111,7 +110,7 @@ class ConcurrencyManager:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """异步上下文管理器出口（实例方法）"""
-        self.release()
+        await self.release()
 
 
 # 便捷函数
@@ -120,9 +119,9 @@ async def acquire_concurrency() -> None:
     await ConcurrencyManager.acquire()
 
 
-def release_concurrency() -> None:
+async def release_concurrency() -> None:
     """释放并发许可"""
-    ConcurrencyManager.release()
+    await ConcurrencyManager.release()
 
 
 def get_concurrency_stats() -> dict:

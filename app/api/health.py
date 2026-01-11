@@ -136,7 +136,7 @@ async def check_claude_cli() -> ServiceCheck:
                 timeout=5
             )
             version = result.stdout.strip() if result.returncode == 0 else "unknown"
-        except Exception:
+        except (OSError, subprocess.TimeoutExpired, FileNotFoundError):
             version = "unknown"
 
         return ServiceCheck(

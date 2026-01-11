@@ -526,8 +526,9 @@ class WebhookHandler(LoggerMixin):
                     error_message=str(e),
                     success=False,
                 )
-            except:
-                pass  # 如果更新状态失败，不影响后续处理
+            except (DatabaseError, RuntimeError, ValueError) as update_error:
+                # 如果更新状态失败，记录日志但不影响后续处理
+                self.logger.warning(f"更新任务状态失败: {update_error}")
 
             # 尝试通知用户（非阻塞）
             if self.github_service:
