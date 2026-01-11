@@ -29,7 +29,7 @@ fi
 # 检查配置
 if [ ! -f ".env" ]; then
     echo -e "${YELLOW}⚠️  .env 文件不存在${NC}"
-    echo -e "${YELLOW}   请先运行: kaka-dev configure${NC}"
+    echo -e "${YELLOW}   请先运行: kaka configure${NC}"
     exit 1
 fi
 

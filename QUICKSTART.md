@@ -20,10 +20,10 @@
 bash scripts/install.sh
 
 # 完成后，配置服务
-kaka-dev configure
+kaka configure
 
 # 启动服务
-kaka-dev start
+kaka start
 ```
 
 ---
@@ -75,7 +75,7 @@ ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxx
 python -m app.main
 
 # 方式 2：使用 CLI
-kaka-dev start
+kaka start
 ```
 
 ---
@@ -157,22 +157,22 @@ http://localhost:8000/dashboard
 
 ```bash
 # 查看服务状态
-kaka-dev status
+kaka status
 
 # 查看日志
-kaka-dev logs
+kaka logs
 
 # 导出配置
-kaka-dev config export
+kaka config export
 
 # 导入配置
-kaka-dev config import
+kaka config import
 
 # 启动开发服务器（自动重载）
-kaka-dev start --reload
+kaka start --reload
 
 # 查看帮助
-kaka-dev --help
+kaka --help
 ```
 
 ---
@@ -186,7 +186,7 @@ kaka-dev --help
 lsof -i :8000
 
 # 查看日志
-kaka-dev logs
+kaka logs
 tail -f logs/ai-scheduler.log
 ```
 
@@ -197,7 +197,7 @@ tail -f logs/ai-scheduler.log
 cat .env
 
 # 重新配置
-kaka-dev configure
+kaka configure
 ```
 
 ### Webhook 不工作
@@ -218,9 +218,9 @@ kaka-dev configure
 
 ## 💡 提示
 
-- 首次使用建议先运行 `kaka-dev configure`
-- 定期运行 `kaka-dev status` 检查服务状态
-- 使用 `kaka-dev logs` 查看详细日志
+- 首次使用建议先运行 `kaka configure`
+- 定期运行 `kaka status` 检查服务状态
+- 使用 `kaka logs` 查看详细日志
 - 保存配置前请确保所有字段都验证通过
 
 ---

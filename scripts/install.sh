@@ -118,7 +118,7 @@ if [ ! -f "$REPO_DIR/.env" ]; then
     echo -e "${BLUE}📝 创建配置文件${NC}"
     cat > "$REPO_DIR/.env" << EOF
 # Kaka Dev 配置文件
-# 请运行: kaka-dev configure 完成配置
+# 请运行: kaka configure 完成配置
 
 # GitHub 配置
 GITHUB_TOKEN=
@@ -137,15 +137,23 @@ fi
 
 # 创建启动脚本
 echo -e "${BLUE}📜 创建启动脚本${NC}"
+cat > "$HOME/kaka" << 'EOF'
+#!/bin/bash
+source $HOME/.kaka-dev/bin/activate
+cd $HOME/kaka-dev
+kaka "$@"
+EOF
+
+# 同时创建 kaka-dev 作为兼容
 cat > "$HOME/kaka-dev" << 'EOF'
 #!/bin/bash
 source $HOME/.kaka-dev/bin/activate
 cd $HOME/kaka-dev
-kaka-dev "$@"
+kaka "$@"
 EOF
 
-chmod +x "$HOME/kaka-dev"
-echo -e "${GREEN}✓${NC} 启动脚本已创建: $HOME/kaka-dev"
+chmod +x "$HOME/kaka" "$HOME/kaka-dev"
+echo -e "${GREEN}✓${NC} 启动脚本已创建: $HOME/kaka (和 $HOME/kaka-dev)"
 echo ""
 
 # 完成
@@ -156,16 +164,18 @@ echo ""
 echo "📝 下一步:"
 echo ""
 echo "  1. 配置服务:"
-echo -e "     ${BLUE}kaka-dev configure${NC}"
+echo -e "     ${BLUE}kaka configure${NC}"
 echo ""
 echo "  2. 启动服务:"
-echo -e "     ${BLUE}kaka-dev start${NC}"
+echo -e "     ${BLUE}kaka start${NC}"
 echo ""
 echo "  3. 查看状态:"
-echo -e "     ${BLUE}kaka-dev status${NC}"
+echo -e "     ${BLUE}kaka status${NC}"
 echo ""
 echo "  4. 查看日志:"
-echo -e "     ${BLUE}kaka-dev logs${NC}"
+echo -e "     ${BLUE}kaka logs${NC}"
+echo ""
+echo "💡 提示: kaka-dev 命令仍然可用（兼容性）"
 echo ""
 echo "📚 文档:"
 echo "   https://github.com/your-username/kaka"

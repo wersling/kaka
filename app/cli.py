@@ -129,7 +129,7 @@ def config(action):
                 }
             }
 
-            config_file = Path.home() / 'kaka-dev-config.json'
+            config_file = Path.home() / 'kaka-config.json'
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -139,7 +139,7 @@ def config(action):
             click.echo(f"❌ 导出失败: {e}", err=True)
 
     elif action == 'import':
-        config_file = Path.home() / 'kaka-dev-config.json'
+        config_file = Path.home() / 'kaka-config.json'
 
         if not config_file.exists():
             click.echo(f"❌ 配置文件不存在: {config_file}")
@@ -183,7 +183,7 @@ def status():
         click.echo(f"")
         click.echo(f"错误: {e}")
         click.echo(f"")
-        click.echo(f"请运行: kaka-dev configure")
+        click.echo(f"请运行: kaka configure")
 
 
 @cli.command()
