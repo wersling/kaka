@@ -37,6 +37,7 @@ ENV/
 .env
 .env.local
 .env.*.local
+.env.backup
 
 # Logs
 logs/
