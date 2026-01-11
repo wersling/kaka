@@ -2,6 +2,7 @@
 fastapi>=0.104.1,<0.106.0
 uvicorn[standard]>=0.24.0,<0.25.0
 python-multipart>=0.0.6,<0.1.0
+slowapi>=0.1.9,<0.2.0
 
 # GitHub API
 pygithub>=2.1.1,<3.0.0

@@ -18,10 +18,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from app.api.health import router as health_router
 from app.config import init_config, get_config, Config
 from app.utils.logger import get_logger, setup_from_config
+from app.core.error_handlers import setup_exception_handlers
 
 # 初始化一个临时日志（后续会被正式配置替换）
 logger = get_logger(__name__)
@@ -218,6 +222,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# 初始化速率限制器
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["60/minute"],  # 默认限制：每分钟 60 次请求
+    storage_uri="memory://",  # 使用内存存储（适合单实例部署）
+    app_headers=True,  # 在响应头中包含速率限制信息
+)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 # 添加 CORS 中间件（安全配置，从配置文件读取允许的来源）
 def get_cors_origins() -> list[str]:
@@ -256,65 +270,8 @@ app.include_router(dashboard_router, tags=["Dashboard"])
 app.include_router(logs_router, prefix="/api", tags=["Logs"])
 
 
-# 全局异常处理器
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """处理 HTTP 异常"""
-    logger.error(
-        f"HTTP 异常: {request.method} {request.url.path} - "
-        f"{exc.status_code}: {exc.detail}"
-    )
-
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "error": True,
-            "message": exc.detail,
-            "status_code": exc.status_code,
-            "path": request.url.path,
-        },
-    )
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(
-    request: Request,
-    exc: RequestValidationError,
-) -> JSONResponse:
-    """处理请求验证异常"""
-    logger.error(
-        f"验证错误: {request.method} {request.url.path} - {exc.errors()}"
-    )
-
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={
-            "error": True,
-            "message": "请求验证失败",
-            "details": exc.errors(),
-            "status_code": 422,
-            "path": request.url.path,
-        },
-    )
-
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """处理未捕获的异常"""
-    logger.error(
-        f"未处理的异常: {request.method} {request.url.path}",
-        exc_info=True,
-    )
-
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "error": True,
-            "message": "内部服务器错误",
-            "status_code": 500,
-            "path": request.url.path,
-        },
-    )
+# 设置统一的异常处理器
+setup_exception_handlers(app)
 
 
 # 根路径
@@ -351,6 +308,7 @@ async def github_webhook_get() -> dict[str, str]:
 
 
 @app.post("/webhook/github", tags=["Webhook"])
+@limiter.limit("10/minute")  # Webhook 端点：每分钟最多 10 次请求
 async def github_webhook(
     request: Request,
     x_hub_signature_256: str | None = Header(None, alias="X-Hub-Signature-256"),
