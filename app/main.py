@@ -26,6 +26,7 @@ from app.api.health import router as health_router
 from app.config import init_config, get_config, Config
 from app.utils.logger import get_logger, setup_from_config
 from app.core.error_handlers import setup_exception_handlers
+from pydantic import ValidationError
 
 # 初始化一个临时日志（后续会被正式配置替换）
 logger = get_logger(__name__)
@@ -147,6 +148,68 @@ def setup_logging() -> logging.Logger:
         return logger
 
 
+def parse_pydantic_error(error: Exception) -> list[str]:
+    """
+    解析 Pydantic 验证错误
+
+    Args:
+        error: 异常对象
+
+    Returns:
+        解析后的错误消息列表
+    """
+    error_str = str(error)
+    errors = []
+
+    # 检查是否是 Pydantic ValidationError
+    if "validation error" in error_str.lower():
+        try:
+            # 尝试从错误字符串中提取字段名和错误消息
+            # Pydantic 错误格式：Field_name\n  Error message
+            lines = error_str.split('\n')
+            i = 0
+            while i < len(lines):
+                line = lines[i].strip()
+
+                # 查找字段行（例如：github.token）
+                if '.' in line and not line.startswith('For further'):
+                    field_parts = line.split('.')
+                    field_name = field_parts[-1] if field_parts else line
+
+                    # 查找错误消息（通常在下一行或几行之后）
+                    i += 1
+                    error_messages = []
+                    while i < len(lines):
+                        next_line = lines[i].strip()
+                        # 跳过空行和元数据行
+                        if not next_line or next_line.startswith('[type=') or next_line.startswith('For further'):
+                            i += 1
+                            continue
+                        # 找到错误消息
+                        if 'Value error' in next_line:
+                            # 提取实际的错误消息（去掉 "Value error, " 前缀）
+                            error_msg = next_line.split('Value error,')[-1].strip()
+                            # 去除末尾的 Pydantic 元数据（例如：[type=value_error, ...]）
+                            error_msg = error_msg.split(' [type=')[0].strip()
+                            error_messages.append(error_msg)
+                            i += 1
+                            break
+                        i += 1
+
+                    # 组合错误消息
+                    for msg in error_messages:
+                        errors.append(f"❌ {msg}")
+                else:
+                    i += 1
+        except Exception:
+            # 如果解析失败，返回原始错误信息
+            errors = [f"⚠️  {error_str}"]
+    else:
+        errors = [f"⚠️  {error_str}"]
+
+    return errors if errors else [f"⚠️  {error_str}"]
+
+
 def check_config_validity(config: Config) -> list[str]:
     """
     检查配置有效性
@@ -194,7 +257,7 @@ def print_config_guide(errors: list[str]) -> None:
     打印配置指南
 
     Args:
-        errors: 错误消息列表
+        errors: 错误消息列表（支持多行错误，用换行符分隔）
     """
     print("\n" + "=" * 70)
     print("⚠️  配置验证失败")
@@ -202,7 +265,16 @@ def print_config_guide(errors: list[str]) -> None:
     print("\n检测到以下配置问题：\n")
 
     for error in errors:
-        print(f"  {error}")
+        # 如果错误包含换行符，按行打印，保持缩进
+        if '\n' in error:
+            lines = error.split('\n')
+            # 打印第一行（错误标题）
+            print(f"  {lines[0]}")
+            # 打印后续行（详细信息），保持原有缩进
+            for line in lines[1:]:
+                print(f"  {line}")
+        else:
+            print(f"  {error}")
 
     print("\n" + "-" * 70)
     print("\n📝 请运行以下命令进行配置：")
@@ -261,7 +333,10 @@ async def lifespan(app: FastAPI):
     if not env_file.exists():
         # 标记应用需要配置
         app.state.needs_configuration = True
-        config_errors = ["未找到配置文件"]
+        config_errors = [
+            "📄 未找到 .env 配置文件",
+            "   需要运行 'kaka configure' 创建配置文件"
+        ]
         logger.warning("未找到配置文件，应用需要配置")
     else:
         try:
@@ -270,7 +345,18 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             # 标记应用需要配置
             app.state.needs_configuration = True
-            config_errors = [f"配置加载失败: {e}"]
+            error_msg = str(e)
+
+            # 检查是否是配置文件不存在
+            if "配置文件不存在" in error_msg or "FileNotFoundError" in error_msg:
+                config_errors = [
+                    "📄 未找到 config/config.yaml 配置文件",
+                    f"   需要运行 'kaka configure' 创建配置文件"
+                ]
+            else:
+                # 使用 parse_pydantic_error 解析验证错误
+                config_errors = parse_pydantic_error(e)
+
             logger.warning(f"配置加载失败: {e}")
 
         # 如果加载成功，检查配置有效性
@@ -282,12 +368,8 @@ async def lifespan(app: FastAPI):
 
     # 如果需要配置，退出程序
     if config_errors:
-        print("\n" + "=" * 70)
-        print("⚠️  应用需要配置才能正常运行")
-        print("=" * 70)
-        print("\n运行以下命令开始配置：")
-        print("  kaka configure")
-        print("\n" + "=" * 70 + "\n")
+        # 使用 print_config_guide 显示详细错误信息
+        print_config_guide(config_errors)
         # 刷新输出缓冲区，确保消息显示
         sys.stdout.flush()
         sys.stderr.flush()
