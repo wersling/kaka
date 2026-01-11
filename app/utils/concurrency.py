@@ -82,7 +82,11 @@ class ConcurrencyManager:
         会自动减少当前运行计数
         """
         with cls._lock:  # 原子操作保护计数器
-            cls._current_running -= 1
+            # 确保计数器不会变成负数（防御性编程）
+            if cls._current_running > 0:
+                cls._current_running -= 1
+            else:
+                logger.warning(f"⚠️ 尝试释放许可但计数器已经是0，可能是过度释放")
         cls._semaphore.release()
         logger.debug(f"🔒 释放并发许可 (当前运行: {cls._current_running}/{cls._max_concurrent})")
 
@@ -100,16 +104,14 @@ class ConcurrencyManager:
             "available": cls._max_concurrent - cls._current_running,
         }
 
-    @classmethod
-    async def __aenter__(cls):
-        """异步上下文管理器入口"""
-        await cls.acquire()
-        return cls
+    async def __aenter__(self):
+        """异步上下文管理器入口（实例方法）"""
+        await self.acquire()
+        return self
 
-    @classmethod
-    async def __aexit__(cls, exc_type, exc_val, exc_tb):
-        """异步上下文管理器出口"""
-        cls.release()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """异步上下文管理器出口（实例方法）"""
+        self.release()
 
 
 # 便捷函数
