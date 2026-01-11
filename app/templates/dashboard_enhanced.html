@@ -196,6 +196,389 @@
         .stat-card.completed .value { color: var(--success); }
         .stat-card.failed .value { color: var(--error); }
 
+        /* 任务列表 */
+        .tasks-header {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px var(--shadow-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .tasks-header h2 {
+            font-size: 20px;
+            color: var(--text-primary);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            font-size: 14px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .auto-refresh input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .auto-refresh label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .tasks-table {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px var(--shadow-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg-tertiary);
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        td {
+            font-size: 14px;
+            color: var(--text-tertiary);
+        }
+
+        tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-running { background: #dbeafe; color: #1e40af; }
+        .status-completed { background: #d1fae5; color: #065f46; }
+        .status-failed { background: #fee2e2; color: #991b1b; }
+        .status-cancelled { background: #f3f4f6; color: #374151; }
+
+        .task-id {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .issue-link {
+            color: var(--info);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .issue-link:hover {
+            text-decoration: underline;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-small:hover {
+            opacity: 0.8;
+        }
+
+        .btn-view {
+            background: var(--info);
+            color: white;
+        }
+
+        .btn-cancel {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-retry {
+            background: var(--warning);
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--info);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        /* 模态框样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 1000;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: #1e1e1e;
+            border-radius: 12px;
+            width: 90vw;
+            height: 85vh;
+            max-width: 1600px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.3s ease-out;
+            overflow: hidden;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: #252526;
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        .modal-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .modal-title {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-task-info {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        .modal-task-info a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .modal-header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .modal-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #6b7280;
+        }
+
+        .modal-status-dot.active {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .modal-status-text {
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        .modal-close {
+            background: #374151;
+            color: #e5e7eb;
+            border: none;
+            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: #4b5563;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-terminal {
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            padding: 12px 16px;
+            background: #1e1e1e;
+            color: #e5e7eb;
+        }
+
+        .modal-terminal::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-terminal::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        .modal-terminal::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        .log-line {
+            padding: 0;
+            line-height: 1.3;
+            white-space: pre-wrap;
+            word-break: break-all;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .log-prefix {
+            color: #9ca3af;
+            font-size: 11px;
+            flex-shrink: 0;
+            margin-right: 8px;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+        }
+
+        .log-prefix .INFO { color: #3b82f6; }
+        .log-prefix .WARNING { color: #f59e0b; }
+        .log-prefix .ERROR { color: #ef4444; }
+        .log-prefix .DEBUG { color: #6b7280; }
+
+        .log-line .message {
+            color: #e5e7eb;
+            flex: 1;
+        }
+
         /* Toast 通知 */
         .toast-container {
             position: fixed;
@@ -341,6 +724,85 @@
                 <div class="value" id="failed-count">-</div>
             </div>
         </div>
+
+        <!-- 任务列表 -->
+        <div class="tasks-header">
+            <h2>📋 任务列表</h2>
+            <div class="controls">
+                <div class="filter-group">
+                    <label for="status-filter">状态:</label>
+                    <select id="status-filter" onchange="loadTasks()">
+                        <option value="">全部</option>
+                        <option value="pending">待处理</option>
+                        <option value="running">运行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="failed">失败</option>
+                        <option value="cancelled">已取消</option>
+                    </select>
+                </div>
+                <div class="auto-refresh">
+                    <input type="checkbox" id="auto-refresh" checked>
+                    <label for="auto-refresh">自动刷新 (10s)</label>
+                </div>
+                <button class="btn btn-primary" onclick="loadTasks()">立即刷新</button>
+            </div>
+        </div>
+
+        <div class="tasks-table">
+            <table id="tasks-table">
+                <thead>
+                    <tr>
+                        <th>任务 ID</th>
+                        <th>Issue</th>
+                        <th>标题</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>执行时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tasks-body">
+                    <tr>
+                        <td colspan="7" class="loading">
+                            <div class="spinner"></div>
+                            <div>加载中...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 日志流模态框 -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <div class="modal-title" id="modal-title">任务详情</div>
+                    <div class="modal-task-info">
+                        <span id="modal-issue">Issue #-</span>
+                        <span id="modal-branch">分支: -</span>
+                        <span id="modal-time">执行时间: -</span>
+                    </div>
+                </div>
+                <div class="modal-header-right">
+                    <div class="modal-status">
+                        <div class="modal-status-dot" id="modal-status-dot"></div>
+                        <div class="modal-status-text" id="modal-status-text">连接中...</div>
+                    </div>
+                    <div class="modal-actions" id="modal-actions" style="display: none;">
+                        <button class="btn-small btn-cancel" onclick="cancelModalTask()">取消</button>
+                        <button class="btn-small btn-retry" onclick="retryModalTask()">重试</button>
+                    </div>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="modal-terminal" id="modal-terminal">
+                    <div class="empty-state" style="padding: 30px; color: #6b7280; font-size: 13px;">等待日志...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Toast 容器 -->
@@ -463,9 +925,16 @@
                     break;
                 case 'ESCAPE':
                     closeShortcuts();
+                    closeModal();
                     break;
             }
         });
+
+        // 全局变量
+        let refreshInterval;
+        let currentTaskId = null;
+        let currentEventSource = null;
+        let isAutoScrolling = true;
 
         // 加载统计数据
         async function loadStats() {
@@ -482,12 +951,405 @@
             }
         }
 
+        // 加载任务列表
+        async function loadTasks() {
+            try {
+                const statusFilter = document.getElementById('status-filter').value;
+                let url = '/api/tasks?limit=50';
+                if (statusFilter) {
+                    url += `&status=${statusFilter}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const tbody = document.getElementById('tasks-body');
+
+                if (data.tasks.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="empty-state">
+                                <p>暂无任务</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = data.tasks.map(task => {
+                    const statusClass = `status-${task.status}`;
+                    const createdAt = new Date(task.created_at).toLocaleString('zh-CN');
+                    const executionTime = task.execution_time ? `${task.execution_time.toFixed(1)}s` : '-';
+
+                    let actions = `<button class="btn-small btn-view" onclick="openModal('${task.task_id}', '${task.status}')">查看详情</button>`;
+
+                    if (task.status === 'running' || task.status === 'pending') {
+                        actions += ` <button class="btn-small btn-cancel" onclick="cancelTask('${task.task_id}')">取消</button>`;
+                    }
+                    if (task.status === 'failed' || task.status === 'cancelled') {
+                        actions += ` <button class="btn-small btn-retry" onclick="retryTask('${task.task_id}')">重试</button>`;
+                    }
+
+                    return `
+                        <tr>
+                            <td><span class="task-id">${task.task_id}</span></td>
+                            <td><a href="${task.issue_url}" target="_blank" class="issue-link">#${task.issue_number}</a></td>
+                            <td>${task.issue_title}</td>
+                            <td><span class="status-badge ${statusClass}">${task.status}</span></td>
+                            <td>${createdAt}</td>
+                            <td>${executionTime}</td>
+                            <td><div class="actions">${actions}</div></td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('加载任务失败:', error);
+                document.getElementById('tasks-body').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <p>加载失败: ${error.message}</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 打开模态框
+        async function openModal(taskId, status) {
+            currentTaskId = taskId;
+            isAutoScrolling = true;
+
+            const modal = document.getElementById('modal-overlay');
+            const modalTitle = document.getElementById('modal-title');
+            const modalStatusDot = document.getElementById('modal-status-dot');
+            const modalStatusText = document.getElementById('modal-status-text');
+
+            // 显示模态框
+            modal.classList.add('active');
+
+            // 添加滚动监听
+            const terminal = document.getElementById('modal-terminal');
+            terminal.addEventListener('scroll', handleScroll);
+
+            // 加载任务信息
+            try {
+                const response = await fetch(`/api/tasks/${taskId}`);
+                const data = await response.json();
+                const task = data.task;
+
+                modalTitle.textContent = task.issue_title;
+                document.getElementById('modal-issue').innerHTML = `<a href="${task.issue_url}" target="_blank">Issue #${task.issue_number}</a>`;
+                document.getElementById('modal-branch').textContent = `分支: ${task.branch_name}`;
+                document.getElementById('modal-time').textContent = `执行时间: ${task.execution_time ? task.execution_time.toFixed(1) + 's' : '-'}`;
+
+                // 显示操作按钮
+                const modalActions = document.getElementById('modal-actions');
+                const cancelBtn = modalActions.querySelector('.btn-cancel');
+                const retryBtn = modalActions.querySelector('.btn-retry');
+
+                if (task.status === 'running' || task.status === 'pending') {
+                    modalActions.style.display = 'flex';
+                    cancelBtn.style.display = 'inline-block';
+                    retryBtn.style.display = 'none';
+                } else if (task.status === 'failed' || task.status === 'cancelled') {
+                    modalActions.style.display = 'flex';
+                    cancelBtn.style.display = 'none';
+                    retryBtn.style.display = 'inline-block';
+                } else {
+                    modalActions.style.display = 'none';
+                }
+
+                // 连接日志流
+                connectLogStream(taskId, task.status);
+
+            } catch (error) {
+                console.error('加载任务信息失败:', error);
+                document.getElementById('modal-terminal').innerHTML = `
+                    <div class="empty-state" style="color: #ef4444;">加载失败: ${error.message}</div>
+                `;
+            }
+        }
+
+        // 关闭模态框
+        function closeModal(event) {
+            if (event && event.target !== document.getElementById('modal-overlay')) {
+                return;
+            }
+
+            const modal = document.getElementById('modal-overlay');
+            modal.classList.remove('active');
+
+            // 移除滚动监听
+            const terminal = document.getElementById('modal-terminal');
+            terminal.removeEventListener('scroll', handleScroll);
+
+            // 关闭 SSE 连接
+            if (currentEventSource) {
+                currentEventSource.close();
+                currentEventSource = null;
+            }
+
+            currentTaskId = null;
+        }
+
+        // 处理滚动事件
+        function handleScroll() {
+            const terminal = document.getElementById('modal-terminal');
+            const scrollPosition = terminal.scrollTop + terminal.clientHeight;
+            const scrollHeight = terminal.scrollHeight;
+
+            // 如果距离底部小于 50px，认为用户在查看最新日志，启用自动滚动
+            if (scrollHeight - scrollPosition < 50) {
+                isAutoScrolling = true;
+            } else {
+                // 用户向上滚动查看历史，停止自动滚动
+                isAutoScrolling = false;
+            }
+        }
+
+        // 连接日志流
+        function connectLogStream(taskId, status) {
+            const terminal = document.getElementById('modal-terminal');
+            const statusDot = document.getElementById('modal-status-dot');
+            const statusText = document.getElementById('modal-status-text');
+
+            // 清空现有内容
+            terminal.innerHTML = '';
+
+            // 如果任务已完成，不连接 SSE
+            if (['completed', 'failed', 'cancelled'].includes(status)) {
+                statusDot.style.background = status === 'completed' ? '#10b981' : '#ef4444';
+                statusText.textContent = getStatusText(status);
+                loadExistingLogs(taskId);
+                return;
+            }
+
+            // 创建 EventSource
+            currentEventSource = new EventSource(`/api/tasks/${taskId}/logs/stream`);
+
+            // 更新状态
+            statusDot.classList.add('active');
+            statusText.textContent = '实时接收中...';
+
+            // 接收日志
+            currentEventSource.onmessage = (event) => {
+                const log = JSON.parse(event.data);
+                appendLogToTerminal(log);
+            };
+
+            // 任务完成
+            currentEventSource.addEventListener('done', (event) => {
+                statusDot.classList.remove('active');
+                statusText.textContent = '已完成';
+                statusDot.style.background = '#10b981';
+                currentEventSource.close();
+                loadTasks();
+                loadStats();
+            });
+
+            // 错误
+            currentEventSource.addEventListener('error', (event) => {
+                statusDot.classList.remove('active');
+                statusText.textContent = '连接错误';
+                statusDot.style.background = '#ef4444';
+                currentEventSource.close();
+            });
+
+            currentEventSource.onerror = (error) => {
+                console.error('EventSource error:', error);
+                statusDot.classList.remove('active');
+                statusText.textContent = '连接断开';
+                statusDot.style.background = '#ef4444';
+            };
+        }
+
+        // 加载已有日志
+        async function loadExistingLogs(taskId) {
+            try {
+                const response = await fetch(`/api/tasks/${taskId}`);
+                const data = await response.json();
+                const logs = data.logs || [];
+
+                const terminal = document.getElementById('modal-terminal');
+                terminal.innerHTML = '';
+
+                // 按时间排序（升序，最旧的在前面）
+                const sortedLogs = logs.sort((a, b) =>
+                    new Date(a.timestamp) - new Date(b.timestamp)
+                );
+
+                // 批量添加日志
+                sortedLogs.forEach(log => {
+                    const timestamp = new Date(log.timestamp).toLocaleTimeString('zh-CN', { hour12: false });
+                    const logLine = document.createElement('div');
+                    logLine.className = 'log-line';
+                    logLine.innerHTML = `
+                        <span class="log-prefix">[${timestamp}] [${log.level}]</span>
+                        <span class="message">${escapeHtml(log.message)}</span>
+                    `;
+                    terminal.appendChild(logLine);
+                });
+
+                // 滚动到底部
+                requestAnimationFrame(() => {
+                    terminal.scrollTop = terminal.scrollHeight;
+                });
+            } catch (error) {
+                console.error('加载日志失败:', error);
+            }
+        }
+
+        // 添加日志到终端
+        function appendLogToTerminal(log) {
+            const terminal = document.getElementById('modal-terminal');
+
+            // 移除空状态提示
+            if (terminal.querySelector('.empty-state')) {
+                terminal.innerHTML = '';
+            }
+
+            const timestamp = new Date(log.timestamp).toLocaleTimeString('zh-CN', { hour12: false });
+            const logLine = document.createElement('div');
+            logLine.className = 'log-line';
+            logLine.innerHTML = `
+                <span class="log-prefix">[${timestamp}] [${log.level}]</span>
+                <span class="message">${escapeHtml(log.message)}</span>
+            `;
+
+            terminal.appendChild(logLine);
+
+            // 只在自动滚动模式时才滚动到底部
+            if (isAutoScrolling) {
+                requestAnimationFrame(() => {
+                    terminal.scrollTop = terminal.scrollHeight;
+                });
+            }
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const texts = {
+                'completed': '已完成',
+                'failed': '失败',
+                'cancelled': '已取消',
+            };
+            return texts[status] || status;
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 取消任务（列表）
+        async function cancelTask(taskId) {
+            if (!confirm('确定要取消此任务吗？')) return;
+
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/cancel`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    loadTasks();
+                    loadStats();
+                    showToast('任务已取消', 'success');
+                } else {
+                    showToast('取消失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showToast('取消失败: ' + error.message, 'error');
+            }
+        }
+
+        // 重试任务（列表）
+        async function retryTask(taskId) {
+            if (!confirm('确定要重试此任务吗？')) return;
+
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/retry`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    loadTasks();
+                    loadStats();
+                    showToast(data.message, 'success');
+                } else {
+                    showToast('重试失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showToast('重试失败: ' + error.message, 'error');
+            }
+        }
+
+        // 取消任务（模态框）
+        async function cancelModalTask() {
+            if (!currentTaskId) return;
+            if (!confirm('确定要取消此任务吗？')) return;
+
+            try {
+                const response = await fetch(`/api/tasks/${currentTaskId}/cancel`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    closeModal();
+                    loadTasks();
+                    loadStats();
+                    showToast('任务已取消', 'success');
+                } else {
+                    showToast('取消失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showToast('取消失败: ' + error.message, 'error');
+            }
+        }
+
+        // 重试任务（模态框）
+        async function retryModalTask() {
+            if (!currentTaskId) return;
+            if (!confirm('确定要重试此任务吗？')) return;
+
+            try {
+                const response = await fetch(`/api/tasks/${currentTaskId}/retry`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    closeModal();
+                    loadTasks();
+                    loadStats();
+                    showToast(data.message, 'success');
+                } else {
+                    showToast('重试失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showToast('重试失败: ' + error.message, 'error');
+            }
+        }
+
+        // 自动刷新控制
+        function toggleAutoRefresh() {
+            const checkbox = document.getElementById('auto-refresh');
+
+            if (checkbox.checked) {
+                refreshInterval = setInterval(() => {
+                    loadStats();
+                    loadTasks();
+                }, 10000);
+            } else {
+                clearInterval(refreshInterval);
+            }
+        }
+
         // 初始化
+        document.getElementById('auto-refresh').addEventListener('change', toggleAutoRefresh);
+
         checkConfigStatus();
         loadStats();
+        loadTasks();
 
-        // 自动刷新统计（每 10 秒）
-        setInterval(loadStats, 10000);
+        // 启动自动刷新
+        toggleAutoRefresh();
     </script>
 </body>
 </html>
