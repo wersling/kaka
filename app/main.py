@@ -227,7 +227,6 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["60/minute"],  # 默认限制：每分钟 60 次请求
     storage_uri="memory://",  # 使用内存存储（适合单实例部署）
-    app_headers=True,  # 在响应头中包含速率限制信息
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
