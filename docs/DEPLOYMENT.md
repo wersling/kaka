@@ -65,7 +65,6 @@ services:
       - GITHUB_REPO_OWNER=${GITHUB_REPO_OWNER}
       - GITHUB_REPO_NAME=${GITHUB_REPO_NAME}
       - REPO_PATH=/app/repo
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
       - ./config:/app/config
       - ./logs:/app/logs

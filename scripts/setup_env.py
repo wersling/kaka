@@ -5,7 +5,6 @@
 用于创建和配置 .env 文件，支持：
 - GitHub 配置（Token、仓库信息、Webhook Secret）
 - 本地代码仓库路径
-- Anthropic API Key
 - ngrok 配置（可选，用于 GitHub Webhook）
 
 使用方法：
@@ -113,6 +112,37 @@ def generate_webhook_secret() -> str:
     return secrets.token_hex(32)
 
 
+async def validate_github_token_with_api(token: str) -> tuple[bool, str]:
+    """
+    验证 GitHub Token（通过 API 调用）
+
+    Args:
+        token: GitHub Token
+
+    Returns:
+        (是否有效, 错误消息)
+    """
+    try:
+        from app.services.github_service import GitHubService
+
+        github = GitHubService(token)
+        is_valid = await github.authenticate()
+
+        if is_valid:
+            return True, ""
+        else:
+            return False, "Token 验证失败：无效或权限不足"
+
+    except Exception as e:
+        error_msg = str(e)
+        if "401" in error_msg or "Bad credentials" in error_msg:
+            return False, "Token 无效，请检查是否正确"
+        elif "403" in error_msg:
+            return False, "Token 权限不足，请确认具有 repo 权限"
+        else:
+            return False, f"验证失败: {error_msg}"
+
+
 def validate_github_token(token: str) -> bool:
     """
     验证 GitHub Token 格式
@@ -161,24 +191,7 @@ def validate_repo_path(path: str) -> tuple[bool, str]:
     return True, ""
 
 
-def validate_anthropic_api_key(api_key: str) -> bool:
-    """
-    验证 Anthropic API Key 格式
-
-    Args:
-        api_key: API Key
-
-    Returns:
-        是否有效
-    """
-    # Anthropic API Key 格式：sk-ant- 后跟至少 80 个字符
-    if api_key.startswith('sk-ant-') and len(api_key) >= 86:
-        return True
-
-    return False
-
-
-def setup_github_config() -> dict:
+async def setup_github_config() -> dict:
     """
     配置 GitHub 相关设置
 
@@ -204,14 +217,23 @@ def setup_github_config() -> dict:
     while True:
         token = input_required("请输入 GitHub Token (以 ghp_ 或 github_pat_ 开头)")
 
-        if validate_github_token(token):
-            config['GITHUB_TOKEN'] = token
-            print_success("GitHub Token 格式验证通过")
-            break
-        else:
+        # 先验证格式
+        if not validate_github_token(token):
             print_error("GitHub Token 格式无效")
             print_info("Classic token 格式: ghp_XXXXXXXXXXXXXXXX (至少 36 字符)")
             print_info("Fine-grained token 格式: github_pat_XXXXXXXXXXXXXXXX (至少 73 字符)")
+            continue
+
+        # 再验证 API
+        print_info("正在验证 Token...")
+        is_valid, error_msg = await validate_github_token_with_api(token)
+
+        if is_valid:
+            config['GITHUB_TOKEN'] = token
+            print_success("GitHub Token 验证通过")
+            break
+        else:
+            print_error(f"GitHub Token 验证失败: {error_msg}")
 
     print()
 
@@ -290,7 +312,7 @@ def setup_github_config() -> dict:
     return config
 
 
-def setup_repo_path() -> dict:
+async def setup_repo_path() -> dict:
     """
     配置本地代码仓库路径
 
@@ -328,51 +350,7 @@ def setup_repo_path() -> dict:
     return config
 
 
-def setup_anthropic_api_key() -> dict:
-    """
-    配置 Anthropic API Key
-
-    Returns:
-        API Key 配置字典
-    """
-    print_header("Anthropic API Key 配置（可选）")
-
-    config = {}
-
-    print_info("Anthropic API Key (Claude Code 需要)")
-    print("  获取方式：")
-    print("    1. 访问 https://console.anthropic.com/")
-    print("    2. 登录后进入 API Keys 页面")
-    print("    3. 创建新的 API Key")
-    print("    4. 设置使用限额（强烈推荐）")
-    print()
-
-    # 询问是否配置
-    configure_api_key = input_yes_no("是否配置 Anthropic API Key？", default=True)
-
-    if not configure_api_key:
-        print_warning("跳过 Anthropic API Key 配置")
-        print_info("您需要稍后在 .env 文件中手动添加 ANTHROPIC_API_KEY")
-        print()
-        return config
-
-    while True:
-        api_key = input_required("请输入 Anthropic API Key (以 sk-ant- 开头)")
-
-        if validate_anthropic_api_key(api_key):
-            config['ANTHROPIC_API_KEY'] = api_key
-            print_success("Anthropic API Key 格式验证通过")
-            break
-        else:
-            print_error("Anthropic API Key 格式无效")
-            print_info("API Key 格式: sk-ant-XXXXXXXXXXXXXXXX (至少 86 字符)")
-
-    print()
-
-    return config
-
-
-def setup_ngrok() -> dict:
+async def setup_ngrok() -> dict:
     """
     配置 ngrok（可选）
 
@@ -474,12 +452,6 @@ def write_env_file(config: dict, env_file: Path) -> None:
         f.write("# 本地代码仓库路径\n")
         f.write("# ----------------------------------------------------------------------------\n\n")
         f.write(f"REPO_PATH={config.get('REPO_PATH', '')}\n\n")
-
-        # Anthropic API Key
-        f.write("# ----------------------------------------------------------------------------\n")
-        f.write("# Anthropic API Key\n")
-        f.write("# ----------------------------------------------------------------------------\n\n")
-        f.write(f"ANTHROPIC_API_KEY={config.get('ANTHROPIC_API_KEY', '')}\n\n")
 
         # ngrok 配置（如果有）
         if 'NGROK_AUTH_TOKEN' in config:
@@ -626,17 +598,16 @@ def print_next_steps(config: dict) -> None:
     print()
 
 
-def main():
+async def main():
     """主函数"""
     print_header("AI 开发调度服务 - 环境配置向导")
 
     print_info("本向导将帮助您配置 .env 文件")
     print("  所需配置项：")
-    print("    ✓ GitHub Token")
+    print("    ✓ GitHub Token（将进行实际 API 验证）")
     print("    ✓ GitHub 仓库信息")
     print("    ✓ GitHub Webhook Secret")
     print("    ✓ 本地代码仓库路径")
-    print("    ✓ Anthropic API Key")
     print("    ○ ngrok 配置（可选）")
     print()
 
@@ -652,19 +623,15 @@ def main():
     config = {}
 
     # GitHub 配置
-    github_config = setup_github_config()
+    github_config = await setup_github_config()
     config.update(github_config)
 
     # 仓库路径
-    repo_config = setup_repo_path()
+    repo_config = await setup_repo_path()
     config.update(repo_config)
 
-    # Anthropic API Key
-    api_config = setup_anthropic_api_key()
-    config.update(api_config)
-
     # ngrok（可选）
-    ngrok_config = setup_ngrok()
+    ngrok_config = await setup_ngrok()
     config.update(ngrok_config)
 
     # 写入 .env 文件
@@ -676,8 +643,9 @@ def main():
 
 
 if __name__ == '__main__':
+    import asyncio
     try:
-        main()
+        asyncio.run(main())
     except KeyboardInterrupt:
         print()
         print_warning("\n配置已取消")

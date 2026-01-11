@@ -9,7 +9,7 @@
 - Python 3.11+
 - Git
 - GitHub 账号
-- Anthropic API Key
+- Claude Code CLI（需要单独安装和配置）
 
 ---
 
@@ -63,9 +63,6 @@ GITHUB_WEBHOOK_SECRET=your-secret
 
 # 仓库配置
 REPO_PATH=/path/to/your/repo
-
-# Anthropic API
-ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxx
 ```
 
 ### 步骤 5：启动服务
@@ -95,7 +92,6 @@ http://localhost:8000/config
 - **仓库所有者**: 你的 GitHub 用户名
 - **仓库名称**: 仓库名称
 - **本地仓库路径**: 仓库的绝对路径
-- **Anthropic API Key**: [获取地址](https://console.anthropic.com/)
 
 ### 3. 验证并保存
 

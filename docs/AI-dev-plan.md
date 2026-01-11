@@ -770,7 +770,7 @@ TOTAL                              89%
 
 ### 外部服务
 - ✅ **GitHub**: 仓库和 Personal Access Token
-- ✅ **Claude API**: Anthropic API Key
+- ✅ **Claude Code CLI**: 使用自己的配置文件（~/.claude/config.json）
 - ❌ **ngrok**: 开发测试用（待配置）
 
 ### 开发工具

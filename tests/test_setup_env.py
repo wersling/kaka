@@ -4,9 +4,10 @@
 注意：这些测试主要测试验证逻辑，不进行实际的交互式输入
 """
 
+import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock, MagicMock
 
 import pytest
 
@@ -16,13 +17,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 from setup_env import (
     validate_github_token,
     validate_repo_path,
-    validate_anthropic_api_key,
     generate_webhook_secret,
+    validate_github_token_with_api,
 )
 
 
 class TestValidateGithubToken:
-    """测试 GitHub Token 验证"""
+    """测试 GitHub Token 验证（格式验证）"""
 
     def test_valid_classic_token(self):
         """测试有效的 Classic Token"""
@@ -48,6 +49,75 @@ class TestValidateGithubToken:
         """测试无效的 Fine-grained Token（太短）"""
         token = "github_pat_" + "a" * 30
         assert validate_github_token(token) is False
+
+
+class TestValidateGithubTokenWithApi:
+    """测试 GitHub Token API 验证（异步）"""
+
+    @pytest.mark.asyncio
+    async def test_valid_token_with_mock_api(self):
+        """测试有效 Token（使用 Mock API）"""
+        token = "ghp_valid_token"
+
+        # Mock GitHubService
+        with patch('setup_env.GitHubService') as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service.authenticate.return_value = True
+            mock_service_class.return_value = mock_service
+
+            is_valid, error_msg = await validate_github_token_with_api(token)
+
+            assert is_valid is True
+            assert error_msg == ""
+            mock_service.authenticate.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_invalid_token_with_mock_api(self):
+        """测试无效 Token（使用 Mock API）"""
+        token = "ghp_invalid_token"
+
+        # Mock GitHubService
+        with patch('setup_env.GitHubService') as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service.authenticate.return_value = False
+            mock_service_class.return_value = mock_service
+
+            is_valid, error_msg = await validate_github_token_with_api(token)
+
+            assert is_valid is False
+            assert "验证失败" in error_msg or "无效" in error_msg
+
+    @pytest.mark.asyncio
+    async def test_token_with_401_error(self):
+        """测试 401 错误处理"""
+        token = "ghp_bad_credentials"
+
+        # Mock GitHubService 抛出 401 异常
+        with patch('setup_env.GitHubService') as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service.authenticate.side_effect = Exception("401 {\"message\": \"Bad credentials\"}")
+            mock_service_class.return_value = mock_service
+
+            is_valid, error_msg = await validate_github_token_with_api(token)
+
+            assert is_valid is False
+            assert "无效" in error_msg
+
+    @pytest.mark.asyncio
+    async def test_token_with_403_error(self):
+        """测试 403 权限不足错误"""
+        token = "ghp_no_permission"
+
+        # Mock GitHubService 抛出 403 异常
+        with patch('setup_env.GitHubService') as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service.authenticate.side_effect = Exception("403 Forbidden")
+            mock_service_class.return_value = mock_service
+
+            is_valid, error_msg = await validate_github_token_with_api(token)
+
+            assert is_valid is False
+            assert "权限不足" in error_msg
 
 
 class TestValidateRepoPath:
@@ -107,25 +177,6 @@ class TestValidateRepoPath:
             assert error_msg == ""
 
 
-class TestValidateAnthropicApiKey:
-    """测试 Anthropic API Key 验证"""
-
-    def test_valid_api_key(self):
-        """测试有效的 API Key"""
-        api_key = "sk-ant-" + "a" * 80
-        assert validate_anthropic_api_key(api_key) is True
-
-    def test_invalid_api_key_no_prefix(self):
-        """测试无效的 API Key（没有前缀）"""
-        api_key = "a" * 86
-        assert validate_anthropic_api_key(api_key) is False
-
-    def test_invalid_api_key_too_short(self):
-        """测试无效的 API Key（太短）"""
-        api_key = "sk-ant-" + "a" * 50
-        assert validate_anthropic_api_key(api_key) is False
-
-
 class TestGenerateWebhookSecret:
     """测试 Webhook Secret 生成"""
 
@@ -163,7 +214,6 @@ class TestWriteEnvFile:
             'GITHUB_REPO_OWNER': 'testuser',
             'GITHUB_REPO_NAME': 'testrepo',
             'REPO_PATH': '/path/to/repo',
-            'ANTHROPIC_API_KEY': 'sk-ant-test-key',
         }
 
         env_file = tmp_path / '.env'
@@ -177,7 +227,6 @@ class TestWriteEnvFile:
         assert 'GITHUB_REPO_OWNER=testuser' in content
         assert 'GITHUB_REPO_NAME=testrepo' in content
         assert 'REPO_PATH=/path/to/repo' in content
-        assert 'ANTHROPIC_API_KEY=sk-ant-test-key' in content
 
     def test_write_env_file_with_ngrok(self, tmp_path):
         """测试写入包含 ngrok 配置的 .env 文件"""
@@ -189,7 +238,6 @@ class TestWriteEnvFile:
             'GITHUB_REPO_OWNER': 'testuser',
             'GITHUB_REPO_NAME': 'testrepo',
             'REPO_PATH': '/path/to/repo',
-            'ANTHROPIC_API_KEY': 'sk-ant-test-key',
             'NGROK_AUTH_TOKEN': 'ngrok_token',
             'NGROK_DOMAIN': 'mydomain.ngrok.io',
         }
@@ -215,7 +263,6 @@ class TestWriteEnvFile:
             'GITHUB_REPO_OWNER': 'newuser',
             'GITHUB_REPO_NAME': 'newrepo',
             'REPO_PATH': '/new/path',
-            'ANTHROPIC_API_KEY': 'sk-ant-new-key',
         }
 
         # Mock input 模拟用户确认覆盖

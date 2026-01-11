@@ -66,7 +66,6 @@ setup_test_env() {
     export GITHUB_REPO_OWNER="testowner"
     export GITHUB_REPO_NAME="testrepo"
     export REPO_PATH="/tmp/test_repo"
-    export ANTHROPIC_API_KEY="sk-ant-test-key-12345"
 
     # 创建测试仓库目录
     mkdir -p "$REPO_PATH"

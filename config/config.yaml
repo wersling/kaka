@@ -44,9 +44,9 @@ claude:
   # 是否跳过权限检查（dangerously-skip-permissions）
   # 默认为 true，以便 Claude 可以执行更多操作
   dangerously_skip_permissions: true
-  # 注意：ANTHROPIC_API_KEY 环境变量需要在系统环境中设置
-  # Claude Code CLI 会自动读取此环境变量，不需要在配置文件中引用
-  # 详见 .env.example 文件中的配置说明
+  # 注意：Claude Code CLI 使用自己的配置文件（通常在 ~/.claude/config.json）
+  # 请确保在使用前已正确安装并配置 Claude Code CLI
+  # 运行 `claude --version` 检查安装状态
 
 # 任务配置
 task:

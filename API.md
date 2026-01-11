@@ -52,8 +52,7 @@ Kaka AI Dev 完整 API 参考
   "github_token": "ghp_xxxxxxxxxxxx",
   "repo_owner": "owner",
   "repo_name": "repo",
-  "repo_path": "/path/to/repo",
-  "anthropic_api_key": "sk-ant-xxxxxxxxxxxx"
+  "repo_path": "/path/to/repo"
 }
 ```
 

@@ -21,7 +21,6 @@
 | `GITHUB_REPO_OWNER` | ✅ | GitHub 仓库所有者 | `your-username` |
 | `GITHUB_REPO_NAME` | ✅ | GitHub 仓库名称 | `your-repo` |
 | `REPO_PATH` | ✅ | 本地仓库绝对路径 | `/Users/you/projects/repo` |
-| `ANTHROPIC_API_KEY` | ✅ | Anthropic API 密钥 | `sk-ant-xxxxxxxxxxxx` |
 | `BASIC_AUTH_USERNAME` | ❌ | 基本认证用户名 | `admin` |
 | `BASIC_AUTH_PASSWORD` | ❌ | 基本认证密码 | `secure-password` |
 | `SLACK_WEBHOOK_URL` | ❌ | Slack 通知 Webhook | `https://hooks.slack.com/...` |
@@ -36,13 +35,6 @@
    - `repo` (完整仓库访问权限)
    - `admin:org_hook` (管理 Webhook)
 4. 点击生成并复制 Token
-
-### 获取 Anthropic API Key
-
-1. 访问 https://console.anthropic.com/
-2. 登录或注册账户
-3. 进入 API Keys 页面
-4. 点击 "Create Key" 生成新密钥
 
 ---
 

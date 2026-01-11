@@ -81,7 +81,6 @@ GITHUB_TOKEN=ghp_your-token-here
 GITHUB_REPO_OWNER=your-username
 GITHUB_REPO_NAME=your-repo
 REPO_PATH=/path/to/your/local/repo
-ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
 ### GitHub Webhook 配置

@@ -128,9 +128,6 @@ GITHUB_WEBHOOK_SECRET=
 
 # 仓库配置
 REPO_PATH=
-
-# Anthropic API
-ANTHROPIC_API_KEY=
 EOF
     echo -e "${GREEN}✓${NC} 配置文件已创建: $REPO_DIR/.env"
 fi

@@ -38,34 +38,51 @@ def setup_logging() -> logging.Logger:
     在应用启动前调用，确保所有日志都能正确输出到文件
     包括应用日志、Uvicorn 访问日志和所有 traceback
 
+    注意：此函数使用默认配置，不在模块加载时验证配置
+    配置验证在 lifespan 中进行
+
     Returns:
         logging.Logger: 配置好的日志记录器
     """
     global logger
 
     try:
-        # 初始化配置
-        config = init_config()
+        # 尝试初始化配置，但失败时使用默认配置
+        # 不在这里抛出异常，让 lifespan 处理配置验证
+        try:
+            config = init_config()
+            log_level = config.logging.level
+            log_file = config.logging.file
+            log_format = config.logging.format
+            log_max_bytes = config.logging.max_bytes
+            log_backup_count = config.logging.backup_count
+        except Exception:
+            # 配置加载失败，使用默认日志配置
+            log_level = "INFO"
+            log_file = "logs/ai-scheduler.log"
+            log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            log_max_bytes = 10 * 1024 * 1024  # 10MB
+            log_backup_count = 5
 
         # 确保 logs 目录存在
-        log_file = Path(config.logging.file)
-        log_file.parent.mkdir(parents=True, exist_ok=True)
+        log_file_path = Path(log_file)
+        log_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # 创建文件处理器（用于所有日志）
         file_handler = RotatingFileHandler(
-            config.logging.file,
-            maxBytes=config.logging.max_bytes,
-            backupCount=config.logging.backup_count,
+            log_file,
+            maxBytes=log_max_bytes,
+            backupCount=log_backup_count,
             encoding="utf-8",
         )
         file_handler.setLevel(logging.DEBUG)  # 捕获所有级别的日志
-        file_formatter = logging.Formatter(config.logging.format)
+        file_formatter = logging.Formatter(log_format)
         file_handler.setFormatter(file_formatter)
 
         # 创建控制台处理器
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, config.logging.level.upper()))
-        console_formatter = logging.Formatter(config.logging.format)
+        console_handler.setLevel(getattr(logging, log_level.upper()))
+        console_formatter = logging.Formatter(log_format)
         console_handler.setFormatter(console_formatter)
 
         # 配置根日志记录器（捕获所有日志，包括 Uvicorn）
@@ -80,7 +97,12 @@ def setup_logging() -> logging.Logger:
         root_logger.addHandler(console_handler)
 
         # 设置应用特定的日志记录器
-        logger_instance = setup_from_config(config)
+        # 如果配置加载成功，使用配置创建 logger
+        try:
+            logger_instance = setup_from_config(config)
+        except Exception:
+            # 配置对象无效，使用基本的 logger
+            logger_instance = get_logger(__name__)
 
         # 更新全局 logger
         logger = logger_instance
@@ -105,7 +127,7 @@ def setup_logging() -> logging.Logger:
         return logger_instance
 
     except Exception as e:
-        # 如果配置加载失败，使用默认配置
+        # 如果日志设置完全失败，使用最基本的配置
         # 确保 logs 目录存在
         Path("logs").mkdir(parents=True, exist_ok=True)
 
@@ -121,8 +143,76 @@ def setup_logging() -> logging.Logger:
         )
 
         logger = logging.getLogger(__name__)
-        logger.warning(f"使用默认日志配置，配置加载失败: {e}")
+        logger.warning(f"使用基本日志配置: {e}")
         return logger
+
+
+def check_config_validity(config: Config) -> list[str]:
+    """
+    检查配置有效性
+
+    Args:
+        config: 配置对象
+
+    Returns:
+        错误消息列表（空列表表示配置有效）
+    """
+    errors = []
+
+    # 检查 GitHub Token
+    if not config.github.token or config.github.token.startswith('${'):
+        errors.append("❌ GitHub Token 未配置或无效")
+    elif not (config.github.token.startswith('ghp_') or config.github.token.startswith('github_pat_')):
+        errors.append("❌ GitHub Token 格式无效（应以 ghp_ 或 github_pat_ 开头）")
+
+    # 检查仓库信息
+    if not config.github.repo_owner or config.github.repo_owner.startswith('${'):
+        errors.append("❌ GitHub 仓库所有者未配置")
+
+    if not config.github.repo_name or config.github.repo_name.startswith('${'):
+        errors.append("❌ GitHub 仓库名称未配置")
+
+    # 检查本地仓库路径
+    if not config.repository.path or str(config.repository.path).startswith('${'):
+        errors.append("❌ 本地仓库路径未配置")
+    else:
+        repo_path = config.repository.path
+        if not repo_path.exists():
+            errors.append(f"❌ 本地仓库路径不存在: {repo_path}")
+        elif not (repo_path / ".git").exists():
+            errors.append(f"❌ 本地路径不是有效的 Git 仓库: {repo_path}")
+
+    # 检查 Webhook Secret
+    if not config.github.webhook_secret or config.github.webhook_secret.startswith('${'):
+        errors.append("❌ GitHub Webhook Secret 未配置")
+
+    return errors
+
+
+def print_config_guide(errors: list[str]) -> None:
+    """
+    打印配置指南
+
+    Args:
+        errors: 错误消息列表
+    """
+    print("\n" + "=" * 70)
+    print("⚠️  配置验证失败")
+    print("=" * 70)
+    print("\n检测到以下配置问题：\n")
+
+    for error in errors:
+        print(f"  {error}")
+
+    print("\n" + "-" * 70)
+    print("\n📝 请运行以下命令进行配置：")
+    print("\n  kaka configure")
+    print("\n配置脚本将引导您完成以下步骤：")
+    print("  1. 验证 GitHub Token（实际 API 调用验证）")
+    print("  2. 配置 GitHub 仓库信息")
+    print("  3. 设置本地仓库路径")
+    print("  4. 生成 Webhook Secret")
+    print("\n" + "=" * 70 + "\n")
 
 
 class TimingMiddleware(BaseHTTPMiddleware):
@@ -163,14 +253,56 @@ async def lifespan(app: FastAPI):
     启动时初始化配置和日志
     关闭时清理资源
     """
-    # 获取配置（日志已在模块加载时设置）
-    config = get_config()
+    # 检查 .env 文件是否存在
+    env_file = Path(".env")
+    config = None
+    config_errors = []
+
+    if not env_file.exists():
+        # 标记应用需要配置
+        app.state.needs_configuration = True
+        config_errors = ["未找到配置文件"]
+        logger.warning("未找到配置文件，应用需要配置")
+    else:
+        try:
+            config = get_config()
+            app.state.needs_configuration = False
+        except Exception as e:
+            # 标记应用需要配置
+            app.state.needs_configuration = True
+            config_errors = [f"配置加载失败: {e}"]
+            logger.warning(f"配置加载失败: {e}")
+
+        # 如果加载成功，检查配置有效性
+        if config:
+            config_errors = check_config_validity(config)
+            if config_errors:
+                app.state.needs_configuration = True
+                logger.warning("配置验证失败")
+
+    # 如果需要配置，退出程序
+    if config_errors:
+        print("\n" + "=" * 70)
+        print("⚠️  应用需要配置才能正常运行")
+        print("=" * 70)
+        print("\n运行以下命令开始配置：")
+        print("  kaka configure")
+        print("\n" + "=" * 70 + "\n")
+        # 刷新输出缓冲区，确保消息显示
+        sys.stdout.flush()
+        sys.stderr.flush()
+        # 直接退出程序，不启动服务
+        import os
+        os._exit(0)
+
+    # 配置有效，继续正常启动流程
 
     # 启动时执行
     logger.info("=" * 60)
     logger.info("🚀 AI 开发调度服务启动中...")
     logger.info("=" * 60)
     logger.info(f"✅ 配置加载成功")
+    logger.info(f"✅ 配置验证通过")
     logger.info(f"✅ 日志系统初始化完成 (级别: {config.logging.level})")
 
     # 初始化数据库
@@ -276,20 +408,40 @@ setup_exception_handlers(app)
 
 
 # 根路径
-@app.get("/", tags=["Root"])
-async def root() -> dict[str, str]:
+@app.get("/", tags=["Root"], response_model=None)
+async def root(request: Request) -> Response:
     """
     根路径
 
-    返回服务基本信息
+    返回服务基本信息或配置引导
     """
-    return {
-        "service": "AI 开发调度服务",
-        "version": "0.1.0",
-        "status": "running",
-        "docs": "/docs",
-        "health": "/health",
-    }
+    # 检查应用是否需要配置
+    if getattr(request.app.state, "needs_configuration", False):
+        return JSONResponse(
+            status_code=503,
+            content={
+                "service": "AI 开发调度服务",
+                "version": "0.1.0",
+                "status": "needs_configuration",
+                "message": "应用需要配置才能正常运行",
+                "setup_command": "kaka configure",
+                "documentation": "配置脚本将引导您完成以下步骤：\n"
+                                "1. 验证 GitHub Token（实际 API 调用验证）\n"
+                                "2. 配置 GitHub 仓库信息\n"
+                                "3. 设置本地仓库路径\n"
+                                "4. 生成 Webhook Secret",
+            },
+        )
+
+    return JSONResponse(
+        content={
+            "service": "AI 开发调度服务",
+            "version": "0.1.0",
+            "status": "running",
+            "docs": "/docs",
+            "health": "/health",
+        },
+    )
 
 
 # Webhook 端点

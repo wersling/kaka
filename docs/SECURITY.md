@@ -152,7 +152,6 @@ htmlcov/
 
 - **GitHub Token**: 每 90 天
 - **Webhook Secret**: 每 90 天
-- **Anthropic API Key**: 每 180 天
 
 ### 4. 加密日志（可选）
 

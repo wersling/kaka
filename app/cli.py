@@ -50,51 +50,35 @@ def start(host, port, reload):
 
 @cli.command()
 def configure():
-    """打开配置向导
+    """配置环境变量
 
-    在浏览器中打开配置页面
+    运行交互式配置脚本
     """
-    import uvicorn
-    from app.main import app
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    setup_script = Path(__file__).parent.parent / "scripts" / "setup_env.py"
+
+    if not setup_script.exists():
+        click.echo(f"❌ 配置脚本不存在: {setup_script}", err=True)
+        return
 
     click.echo(f"🚀 启动配置向导...")
+    click.echo(f"")
 
-    # 在后台启动服务器
-    def run_server():
-        uvicorn.run(
-            app,
-            host="127.0.0.1",
-            port=8000,
-            log_level="error"  # 减少日志输出
+    try:
+        # 直接运行配置脚本
+        result = subprocess.run(
+            [sys.executable, str(setup_script)],
+            check=False,
         )
+        sys.exit(result.returncode)
 
-    server = threading.Thread(target=run_server, daemon=True)
-    server.start()
-
-    # 等待服务器启动
-    click.echo(f"⏳ 等待服务启动...")
-    time.sleep(2)
-
-    # 打开浏览器
-    url = "http://127.0.0.1:8000/config"
-    click.echo(f"🌐 打开浏览器: {url}")
-    click.echo(f"")
-
-    try:
-        webbrowser.open(url)
-    except Exception as e:
-        click.echo(f"⚠️  无法自动打开浏览器: {e}")
-        click.echo(f"请手动访问: {url}")
-
-    click.echo(f"")
-    click.echo(f"配置向导已在后台运行。按 Ctrl+C 退出。")
-
-    try:
-        # 保持主线程运行
-        while True:
-            time.sleep(1)
     except KeyboardInterrupt:
-        click.echo(f"\n👋 配置向导已关闭")
+        click.echo(f"\n👋 配置已取消")
+    except Exception as e:
+        click.echo(f"❌ 配置失败: {e}", err=True)
 
 
 @cli.command()

@@ -97,8 +97,18 @@ def setup_exception_handlers(app: FastAPI) -> None:
         Returns:
             JSONResponse: 错误响应
         """
+        # 格式化错误信息，确保所有对象都是可序列化的
+        formatted_errors = []
+        for error in exc.errors():
+            formatted_error = {
+                "field": ".".join(str(loc) for loc in error["loc"]),
+                "message": error["msg"],
+                "type": error["type"],
+            }
+            formatted_errors.append(formatted_error)
+
         logger.error(
-            f"验证错误: {request.method} {request.url.path} - {exc.errors()}"
+            f"验证错误: {request.method} {request.url.path} - {formatted_errors}"
         )
 
         return JSONResponse(
@@ -108,7 +118,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
                 "code": "VALIDATION_ERROR",
                 "message": "请求验证失败",
                 "status_code": 422,
-                "details": exc.errors(),
+                "details": formatted_errors,
                 "path": request.url.path,
             },
         )
