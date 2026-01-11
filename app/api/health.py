@@ -21,7 +21,7 @@ class HealthResponse(BaseModel):
     """健康检查响应"""
 
     status: str
-    service: str = "ai-dev-scheduler"
+    service: str = "kaka"
     version: str = "0.1.0"
     timestamp: str  # 改为字符串类型，使用ISO格式
     uptime_seconds: float
@@ -220,4 +220,4 @@ async def ping() -> dict[str, str]:
     """
     简单的 ping 端点，用于快速检查服务是否在线
     """
-    return {"status": "pong", "service": "ai-dev-scheduler"}
+    return {"status": "pong", "service": "kaka"}

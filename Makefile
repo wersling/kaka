@@ -116,26 +116,26 @@ clean-all: clean ## 完全清理项目（包括虚拟环境）
 ## 🐳 Docker 构建
 docker-build: ## 构建 Docker 镜像
 	@echo "$(BLUE)🐳 构建 Docker 镜像...$(NC)"
-	@docker build -t ai-dev-scheduler:latest .
+	@docker build -t kaka:latest .
 
 ## 🐳 Docker 运行
 docker-run: ## 运行 Docker 容器
 	@echo "$(BLUE)🐳 运行 Docker 容器...$(NC)"
-	@docker run -d --name ai-dev-scheduler -p 8000:8000 \
-		--env-file .env ai-dev-scheduler:latest
+	@docker run -d --name kaka -p 8000:8000 \
+		--env-file .env kaka:latest
 
 ## 🐳 Docker 停止
 docker-stop: ## 停止 Docker 容器
 	@echo "$(BLUE)🛑 停止 Docker 容器...$(NC)"
-	@docker stop ai-dev-scheduler 2>/dev/null || true
-	@docker rm ai-dev-scheduler 2>/dev/null || true
+	@docker stop kaka 2>/dev/null || true
+	@docker rm kaka 2>/dev/null || true
 
 ## 🐳 Docker 清理
 docker-clean: ## 清理 Docker 镜像和容器
 	@echo "$(BLUE)🧹 清理 Docker 资源...$(NC)"
-	@docker stop ai-dev-scheduler 2>/dev/null || true
-	@docker rm ai-dev-scheduler 2>/dev/null || true
-	@docker rmi ai-dev-scheduler:latest 2>/dev/null || true
+	@docker stop kaka 2>/dev/null || true
+	@docker rm kaka 2>/dev/null || true
+	@docker rmi kaka:latest 2>/dev/null || true
 	@echo "$(GREEN)✅ Docker 清理完成！$(NC)"
 
 # ===== 性能测试 =====

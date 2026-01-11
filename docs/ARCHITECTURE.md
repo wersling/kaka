@@ -95,7 +95,7 @@
 ### 目录结构
 
 ```
-ai-dev-scheduler/
+kaka/
 ├── app/
 │   ├── main.py                 # FastAPI 应用入口
 │   ├── config.py               # 配置管理

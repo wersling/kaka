@@ -1087,14 +1087,14 @@ class TestPingEndpoint:
         测试：ping 端点返回 pong
 
         场景：发送 GET 请求到 /ping
-        期望：返回 {"status": "pong", "service": "ai-dev-scheduler"}
+        期望：返回 {"status": "pong", "service": "kaka"}
         """
         response = await async_client.get("/ping")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["status"] == "pong"
-        assert data["service"] == "ai-dev-scheduler"
+        assert data["service"] == "kaka"
 
     @pytest.mark.asyncio
     async def test_ping_response_time(self, async_client):

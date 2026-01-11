@@ -485,4 +485,4 @@ curl http://localhost:8000/api/config/status
 
 ## 支持
 
-如有问题，请访问 [GitHub Issues](https://github.com/your-org/kaka/issues)
+如有问题，请访问 [GitHub Issues](https://github.com/wersling/kaka/issues)

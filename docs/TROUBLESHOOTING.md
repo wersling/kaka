@@ -261,7 +261,7 @@ grep "2024-01-08 10:" logs/ai-scheduler.log
 如果以上方法都无法解决问题：
 
 1. 查看 [完整文档](../README.md)
-2. 搜索 [已有 Issues](https://github.com/your-org/kaka/issues)
+2. 搜索 [已有 Issues](https://github.com/wersling/kaka/issues)
 3. 创建新的 Issue，包含：
    - 详细的错误描述
    - 完整的日志信息

@@ -35,7 +35,7 @@ kaka start
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-org/kaka.git
+git clone https://github.com/wersling/kaka.git
 cd kaka
 
 # 创建虚拟环境

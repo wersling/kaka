@@ -16,7 +16,7 @@
 
 ### 报告 Bug
 
-1. 在 [Issues](https://github.com/your-org/kaka/issues) 中搜索现有问题
+1. 在 [Issues](https://github.com/wersling/kaka/issues) 中搜索现有问题
 2. 创建新的 Issue，包含：
    - 清晰的标题和描述
    - 复现步骤
@@ -322,6 +322,6 @@ def test_process_issue():
 
 ## 联系方式
 
-- **项目主页**: https://github.com/your-org/kaka
-- **问题反馈**: https://github.com/your-org/kaka/issues
+- **项目主页**: https://github.com/wersling/kaka
+- **问题反馈**: https://github.com/wersling/kaka/issues
 - **邮箱**: your-email@example.com

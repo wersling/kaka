@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ai-dev-scheduler"
+name = "kaka"
 version = "0.1.0"
 description = "AI 开发调度服务 - 通过 GitHub Webhook 触发 Claude Code CLI 自动化开发"
 readme = "README.md"
@@ -45,9 +45,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/ai-dev-scheduler"
-Repository = "https://github.com/your-org/ai-dev-scheduler"
-Documentation = "https://github.com/your-org/ai-dev-scheduler/docs"
+Homepage = "https://github.com/wersling/kaka"
+Repository = "https://github.com/wersling/kaka"
+Documentation = "https://github.com/wersling/kaka/docs"
 
 [project.scripts]
 kaka = "app.cli:cli"
