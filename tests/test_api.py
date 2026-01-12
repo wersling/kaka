@@ -188,43 +188,31 @@ class TestRootEndpoint:
     @pytest.mark.asyncio
     async def test_root_returns_service_info(self, async_client):
         """
-        测试：根路径返回正确的服务信息
+        测试：根路径返回 Dashboard HTML 页面
 
         场景：GET 请求到根路径
-        期望：返回包含 service、version、status、docs、health 的字典
+        期望：返回 HTML 页面（Dashboard）
         """
         response = await async_client.get("/")
 
         assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["service"] == "AI 开发调度服务"
-        assert data["version"] == "0.1.0"
-        assert data["status"] == "running"
-        assert data["docs"] == "/docs"
-        assert data["health"] == "/health"
+        # 根路径现在返回 HTML Dashboard，而不是 JSON
+        assert "text/html" in response.headers["content-type"]
 
     @pytest.mark.asyncio
     async def test_root_response_fields(self, async_client):
         """
-        测试：根路径响应包含所有必需字段
+        测试：根路径返回有效的 HTML 内容
 
-        场景：检查响应体的字段
-        期望：所有字段都存在且类型正确
+        场景：检查响应内容
+        期望：返回包含 HTML 结构的内容
         """
         response = await async_client.get("/")
-        data = response.json()
+        content = response.text
 
-        # 检查所有必需字段
-        required_fields = ["service", "version", "status", "docs", "health"]
-        for field in required_fields:
-            assert field in data, f"缺少字段: {field}"
-
-        # 检查字段类型
-        assert isinstance(data["service"], str)
-        assert isinstance(data["version"], str)
-        assert isinstance(data["status"], str)
-        assert isinstance(data["docs"], str)
-        assert isinstance(data["health"], str)
+        # 验证是 HTML 内容
+        assert "<!DOCTYPE html>" in content or "<html" in content
+        assert "text/html" in response.headers["content-type"]
 
     @pytest.mark.asyncio
     async def test_root_contains_timing_header(self, async_client):
@@ -1062,15 +1050,17 @@ class TestMiddleware:
         """
         测试：中间件不修改响应体
 
-        场景：发送请求到根路径
+        场景：发送请求到 /ping 端点
         期望：响应体内容正确
         """
-        response = await async_client.get("/")
+        # 使用 /ping 端点而不是根路径，因为根路径返回 HTML
+        response = await async_client.get("/ping")
 
         # 检查响应体未被修改
         data = response.json()
+        assert "status" in data
+        assert data["status"] == "pong"
         assert "service" in data
-        assert "version" in data
 
 
 # =============================================================================

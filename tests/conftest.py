@@ -82,7 +82,7 @@ def test_config():
             trigger_command="/ai develop",
         ),
         repository=RepositoryConfig(
-            path=Path(temp_dir),
+            path=str(temp_dir),  # 传入字符串而不是 Path 对象
             default_branch="main",
             remote_name="origin",
         ),
