@@ -33,9 +33,8 @@ def init_db():
     """初始化数据库，创建所有表"""
     from app.db.models import Base
 
-    logger.info(f"初始化数据库: {DB_PATH}")
+    logger.debug(f"初始化数据库: {DB_PATH}")
     Base.metadata.create_all(bind=engine)
-    logger.info("✅ 数据库表创建完成")
 
 
 def get_db() -> Generator[Session, None, None]:

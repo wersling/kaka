@@ -1,5 +1,5 @@
 """
-Kaka Dev CLI
+Kaka CLI
 命令行工具入口
 """
 
@@ -12,7 +12,7 @@ import time
 @click.group()
 @click.version_option(version="0.1.0")
 def cli():
-    """Kaka Dev - AI 开发调度服务
+    """Kaka - AI 开发调度服务
 
     通过 GitHub Webhook 自动调用 Claude Code CLI 进行开发
     """
@@ -30,7 +30,7 @@ def start(host, port, reload):
     """
     import uvicorn
 
-    click.echo(f"🚀 启动 Kaka Dev...")
+    click.echo(f"🚀 启动 Kaka...")
     click.echo(f"")
     click.echo(f"📍 Dashboard: http://{host}:{port}/dashboard")
     click.echo(f"📍 API 文档: http://{host}:{port}/docs")

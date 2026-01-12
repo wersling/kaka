@@ -42,7 +42,6 @@ class ConcurrencyManager:
         if cls._semaphore is None:
             cls._max_concurrent = max_concurrent
             cls._semaphore = asyncio.Semaphore(max_concurrent)
-            logger.info(f"✅ 并发管理器初始化完成 (最大并发: {max_concurrent})")
         else:
             logger.warning("并发管理器已经初始化，跳过")
 

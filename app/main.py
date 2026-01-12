@@ -29,7 +29,8 @@ from app.core.error_handlers import setup_exception_handlers
 from pydantic import ValidationError
 
 # 初始化一个临时日志（后续会被正式配置替换）
-logger = get_logger(__name__)
+# 使用根记录器，这样可以确保日志正确传播
+logger = logging.getLogger(__name__)
 
 
 def setup_logging() -> logging.Logger:
@@ -79,7 +80,7 @@ def setup_logging() -> logging.Logger:
         file_handler.setLevel(logging.DEBUG)  # 捕获所有级别的日志
         file_formatter = logging.Formatter(log_format)
         file_handler.setFormatter(file_formatter)
-
+        
         # 创建控制台处理器
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(getattr(logging, log_level.upper()))
@@ -101,16 +102,11 @@ def setup_logging() -> logging.Logger:
         # 如果配置加载成功，使用配置创建 logger
         try:
             logger_instance = setup_from_config(config)
+            # 注意：logger_instance 的 propagate=False，所以它不会传播到根记录器
+            # 我们保留它用于其他模块使用，但 main.py 继续使用自己的 logger
         except Exception:
             # 配置对象无效，使用基本的 logger
             logger_instance = get_logger(__name__)
-
-        # 更新全局 logger
-        logger = logger_instance
-
-        # 同时更新模块级别的 logger
-        this_module = sys.modules[__name__]
-        this_module.logger = logger_instance
 
         # 配置 Uvicorn 日志记录器
         uvicorn_loggers = [
@@ -125,6 +121,7 @@ def setup_logging() -> logging.Logger:
             uvicorn_logger.handlers.clear()
             uvicorn_logger.propagate = True  # 传播到根记录器
 
+        logger.info("日志系统初始化完成, 使用文件: %s", log_file)
         return logger_instance
 
     except Exception as e:
@@ -416,6 +413,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"📂 本地路径: {config.repository.path}")
     logger.info(f"🏷️  触发标签: {config.github.trigger_label}")
     logger.info(f"💬 触发命令: {config.github.trigger_command}")
+    logger.info(f"📝 日志文件: {config.logging.file}")
 
     logger.info("=" * 60)
     logger.info("✅ 服务启动完成")
