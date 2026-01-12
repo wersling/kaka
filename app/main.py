@@ -60,7 +60,7 @@ def setup_logging() -> logging.Logger:
         except Exception:
             # 配置加载失败，使用默认日志配置
             log_level = "INFO"
-            log_file = "logs/ai-scheduler.log"
+            log_file = "logs/kaka.log"
             log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             log_max_bytes = 10 * 1024 * 1024  # 10MB
             log_backup_count = 5
@@ -137,7 +137,7 @@ def setup_logging() -> logging.Logger:
             level=logging.DEBUG,  # 捕获所有日志
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             handlers=[
-                logging.FileHandler("logs/ai-scheduler.log", encoding="utf-8"),
+                logging.FileHandler("logs/kaka.log", encoding="utf-8"),
                 logging.StreamHandler(),
             ],
             force=True,  # 强制重新配置

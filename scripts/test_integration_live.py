@@ -324,7 +324,7 @@ class ServiceManager:
             return True
 
         Colors.print_info("启动服务...")
-        log_file = self.log_path / "ai-scheduler.log"
+        log_file = self.log_path / "kaka.log"
 
         # 确保日志目录存在
         self.log_path.mkdir(parents=True, exist_ok=True)
@@ -416,7 +416,7 @@ class ServiceManager:
         Args:
             lines: 行数
         """
-        log_file = self.log_path / "ai-scheduler.log"
+        log_file = self.log_path / "kaka.log"
         try:
             result = subprocess.run(
                 ["tail", f"-n{lines}", str(log_file)],

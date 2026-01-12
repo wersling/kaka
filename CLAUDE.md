@@ -64,10 +64,10 @@ kaka/
 ./scripts/dev.sh
 
 # 查看最近 20 行日志（用于排查错误）
-tail -n 20 logs/ai-scheduler.log
+tail -n 20 logs/kaka.log
 
 # 实时查看日志
-tail -f logs/ai-scheduler.log
+tail -f logs/kaka.log
 ```
 
 ### 环境配置

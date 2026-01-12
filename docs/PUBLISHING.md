@@ -104,8 +104,6 @@ pip install dist/kaka-{version}-py3-none-any.whl
 
 # 验证命令行工具
 kaka --help
-kaka-dev --help
-ai-scheduler --help
 
 # 清理测试环境
 deactivate

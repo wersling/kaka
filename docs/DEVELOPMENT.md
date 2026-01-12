@@ -382,7 +382,7 @@ logging:
 kaka logs
 
 # 或直接查看日志文件
-tail -f logs/ai-scheduler.log
+tail -f logs/kaka.log
 ```
 
 ### 使用 Python 调试器

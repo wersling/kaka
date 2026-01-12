@@ -179,7 +179,7 @@ def logs(lines):
     """
     from pathlib import Path
 
-    log_file = Path("logs/ai-scheduler.log")
+    log_file = Path("logs/kaka.log")
 
     if not log_file.exists():
         click.echo(f"❌ 日志文件不存在: {log_file}")

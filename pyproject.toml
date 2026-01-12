@@ -55,8 +55,6 @@ Documentation = "https://github.com/wersling/kaka/docs"
 
 [project.scripts]
 kaka = "app.cli:cli"
-kaka-dev = "app.cli:cli"  # 保留兼容性
-ai-scheduler = "app.main:main"
 
 [tool.setuptools.packages.find]
 include = ["app*"]

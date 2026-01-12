@@ -15,7 +15,7 @@ import structlog
 
 
 def setup_logger(
-    name: str = "ai-scheduler",
+    name: str = "kaka",
     level: str = "INFO",
     log_file: Optional[str] = None,
     max_bytes: int = 10485760,  # 10 MB
@@ -119,7 +119,7 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     """
     if name:
         return logging.getLogger(name)
-    return logging.getLogger("ai-scheduler")
+    return logging.getLogger("kaka")
 
 
 class LoggerMixin:
@@ -199,7 +199,7 @@ def setup_from_config(config) -> logging.Logger:
         logging.Logger: 配置好的日志记录器
     """
     return setup_logger(
-        name="ai-scheduler",
+        name="kaka",
         level=config.logging.level,
         log_file=config.logging.file,
         max_bytes=config.logging.max_bytes,

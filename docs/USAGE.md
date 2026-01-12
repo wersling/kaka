@@ -83,7 +83,7 @@ User123: /ai develop
 
 ```bash
 # 查看实时日志
-tail -f logs/ai-scheduler.log
+tail -f logs/kaka.log
 
 # 或使用 CLI 工具
 kaka logs

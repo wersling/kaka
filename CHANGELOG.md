@@ -31,7 +31,7 @@
 - GitHub Webhook 集成，支持触发 AI 开发
 - Claude Code CLI 自动化支持
 - 实时监控的 Dashboard UI
-- CLI 工具（kaka, kaka-dev, ai-scheduler）
+- CLI 工具（kaka）
 - 配置向导，简化设置流程
 - Git 自动化（创建分支、提交、推送）
 - 自动创建 Pull Request

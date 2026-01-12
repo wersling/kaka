@@ -114,7 +114,7 @@ class LoggingConfig(BaseModel):
     """日志配置"""
 
     level: str = "INFO"
-    file: str = "logs/ai-scheduler.log"
+    file: str = "logs/kaka.log"
     max_bytes: int = 10485760  # 10 MB
     backup_count: int = 5
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -64,7 +64,7 @@ logging:
   # 日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL
   level: "INFO"
   # 日志文件路径
-  file: "logs/ai-scheduler.log"
+  file: "logs/kaka.log"
   # 日志文件大小限制（MB）
   max_bytes: 10485760  # 10 MB
   # 保留的日志文件数量
