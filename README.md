@@ -83,7 +83,6 @@ kaka start
 
 ## 文档
 
-- [快速启动指南](docs/s/QUICKSTART.md) - 5 分钟上手教程
 - [API 文档](docs/API.md) - 完整 API 参考
 - [使用指南](docs/USAGE.md) - 使用说明和示例
 - [开发指南](docs/DEVELOPMENT.md) - 开发者文档
