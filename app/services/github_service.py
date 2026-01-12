@@ -99,8 +99,7 @@ class GitHubService(LoggerMixin):
             base = base_branch or config.repository.default_branch
 
             self.logger.info(
-                f"准备创建 PR: {branch_name} -> {base} "
-                f"(关联 Issue #{issue_number})"
+                f"准备创建 PR: {branch_name} -> {base} " f"(关联 Issue #{issue_number})"
             )
 
             # 检查分支之间是否有差异
@@ -159,7 +158,7 @@ class GitHubService(LoggerMixin):
                 # 其他 GitHub API 错误
                 self.logger.error(
                     f"创建 PR 失败 (GitHub API 错误 {e.status}): {e.data.get('message', str(e))}",
-                    exc_info=False  # 不打印完整 traceback
+                    exc_info=False,  # 不打印完整 traceback
                 )
                 raise
 
@@ -323,9 +322,7 @@ class GitHubService(LoggerMixin):
 
             issue.set_labels(*labels)
 
-            self.logger.info(
-                f"✅ 已更新 Issue #{issue_number} 标签: {', '.join(labels)}"
-            )
+            self.logger.info(f"✅ 已更新 Issue #{issue_number} 标签: {', '.join(labels)}")
 
         except GithubException as e:
             self.logger.error(
@@ -464,9 +461,7 @@ class GitHubService(LoggerMixin):
                     time.sleep(wait_time)
                     self.logger.info("✅ 速率限制等待完成，继续执行")
                 else:
-                    self.logger.warning(
-                        f"⚠️ GitHub API 速率限制剩余 {remaining}，建议稍后重试"
-                    )
+                    self.logger.warning(f"⚠️ GitHub API 速率限制剩余 {remaining}，建议稍后重试")
 
             return remaining >= 10  # 至少保留10次请求
 
@@ -493,13 +488,15 @@ class GitHubService(LoggerMixin):
 
             prs = []
             for pr in pulls:
-                prs.append({
-                    "pr_number": pr.number,
-                    "html_url": pr.html_url,
-                    "url": pr.url,
-                    "state": pr.state,
-                    "title": pr.title,
-                })
+                prs.append(
+                    {
+                        "pr_number": pr.number,
+                        "html_url": pr.html_url,
+                        "url": pr.url,
+                        "state": pr.state,
+                        "title": pr.title,
+                    }
+                )
 
             if prs:
                 self.logger.info(f"找到 {len(prs)} 个 PR 关联分支 '{branch_name}'")

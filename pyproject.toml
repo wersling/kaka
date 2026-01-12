@@ -3,12 +3,12 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "kaka"
-version = "0.1.0"
-description = "AI 开发调度服务 - 通过 GitHub Webhook 触发 Claude Code CLI 自动化开发"
+name = "kaka-auto"
+version = "0.1.1"
+description = "Kaka Auto - AI 开发调度服务，通过 GitHub Webhook 触发 Claude Code CLI 自动化开发"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
     {name = "AI Development Team"}
 ]
@@ -30,6 +30,10 @@ dependencies = [
     "pydantic-settings>=2.1.0",
     "cryptography>=41.0.7",
     "structlog>=23.2.0",
+    "slowapi>=0.1.9",
+    "sqlalchemy>=2.0.0",
+    "jinja2>=3.1.0",
+    "httpx>=0.25.0",
 ]
 
 [project.optional-dependencies]

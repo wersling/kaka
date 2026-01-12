@@ -33,6 +33,7 @@ class GitService(LoggerMixin):
         """
         if repo_path is None:
             from app.config import get_config
+
             config = get_config()
             repo_path = config.repository.path
 
@@ -80,9 +81,7 @@ class GitService(LoggerMixin):
                 timestamp=timestamp,
             )
 
-            self.logger.info(
-                f"创建特性分支: {branch_name} (基于 {default_branch})"
-            )
+            self.logger.info(f"创建特性分支: {branch_name} (基于 {default_branch})")
 
             # 获取远程
             origin = self.repo.remotes[remote_name]
@@ -91,9 +90,7 @@ class GitService(LoggerMixin):
             local_branch_exists = default_branch in [h.name for h in self.repo.heads]
 
             if not local_branch_exists:
-                self.logger.warning(
-                    f"本地分支 '{default_branch}' 不存在，尝试从远程创建"
-                )
+                self.logger.warning(f"本地分支 '{default_branch}' 不存在，尝试从远程创建")
                 # 尝试从远程获取并创建本地分支
                 try:
                     # 获取远程的所有分支
@@ -104,9 +101,7 @@ class GitService(LoggerMixin):
                         # 从远程创建本地分支
                         self.logger.info(f"从远程创建本地分支: {default_branch}")
                         remote_ref = origin.refs[default_branch]
-                        local_branch = self.repo.create_head(
-                            default_branch, remote_ref
-                        )
+                        local_branch = self.repo.create_head(default_branch, remote_ref)
                         local_branch.set_tracking_branch(remote_ref)
                         local_branch.checkout()
                     else:
@@ -125,13 +120,9 @@ class GitService(LoggerMixin):
                         if available_branches:
                             # 使用第一个可用的分支
                             actual_default = available_branches[0]
-                            self.logger.info(
-                                f"使用远程分支 '{actual_default}' 作为默认分支"
-                            )
+                            self.logger.info(f"使用远程分支 '{actual_default}' 作为默认分支")
                             remote_ref = origin.refs[actual_default]
-                            local_branch = self.repo.create_head(
-                                actual_default, remote_ref
-                            )
+                            local_branch = self.repo.create_head(actual_default, remote_ref)
                             local_branch.set_tracking_branch(remote_ref)
                             local_branch.checkout()
                             default_branch = actual_default
@@ -141,8 +132,7 @@ class GitService(LoggerMixin):
                             )
                 except Exception as e:
                     raise Exception(
-                        f"无法从远程创建本地分支: {e}。"
-                        f"请确保远程仓库存在且可访问。"
+                        f"无法从远程创建本地分支: {e}。" f"请确保远程仓库存在且可访问。"
                     ) from e
             else:
                 # 确保在默认分支
@@ -217,9 +207,7 @@ class GitService(LoggerMixin):
 
             # 提交
             commit = self.repo.index.commit(message)
-            self.logger.info(
-                f"✅ 提交成功: {commit.hexsha[:7]} - {message}"
-            )
+            self.logger.info(f"✅ 提交成功: {commit.hexsha[:7]} - {message}")
 
             return True
 

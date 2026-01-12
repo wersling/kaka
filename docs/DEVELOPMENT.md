@@ -125,10 +125,8 @@ kaka/
 │   └── cli.py                # 命令行工具
 ├── config/                   # 配置文件
 │   └── config.yaml           # 主配置文件
-├── scripts/                  # 脚本
-│   ├── setup.sh              # 初始化脚本
-│   ├── dev.sh                # 开发启动脚本
-│   └── install.sh            # 一键安装脚本
+├── scripts/                  # 开发和测试脚本
+├── dev_setup.sh              # 开发环境初始化脚本
 ├── tests/                    # 测试套件
 ├── logs/                     # 日志文件
 ├── templates/                # HTML 模板

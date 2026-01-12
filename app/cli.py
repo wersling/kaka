@@ -20,9 +20,9 @@ def cli():
 
 
 @cli.command()
-@click.option('--host', default='127.0.0.1', help='绑定的主机地址')
-@click.option('--port', default=8000, type=int, help='绑定的端口')
-@click.option('--reload', is_flag=True, help='启用自动重载（开发模式）')
+@click.option("--host", default="127.0.0.1", help="绑定的主机地址")
+@click.option("--port", default=8000, type=int, help="绑定的端口")
+@click.option("--reload", is_flag=True, help="启用自动重载（开发模式）")
 def start(host, port, reload):
     """启动服务
 
@@ -39,13 +39,7 @@ def start(host, port, reload):
     click.echo(f"按 Ctrl+C 停止服务")
     click.echo(f"")
 
-    uvicorn.run(
-        "app.main:app",
-        host=host,
-        port=port,
-        reload=reload,
-        log_level="info"
-    )
+    uvicorn.run("app.main:app", host=host, port=port, reload=reload, log_level="info")
 
 
 @cli.command()
@@ -58,10 +52,16 @@ def configure():
     import sys
     from pathlib import Path
 
-    setup_script = Path(__file__).parent.parent / "scripts" / "setup_env.py"
+    # 尝试从包内或项目根目录查找 setup_env.py
+    setup_script = Path(__file__).parent / "setup_env.py"
+
+    if not setup_script.exists():
+        # 如果包内不存在，尝试从项目根目录（开发模式）
+        setup_script = Path(__file__).parent.parent / "scripts" / "setup_env.py"
 
     if not setup_script.exists():
         click.echo(f"❌ 配置脚本不存在: {setup_script}", err=True)
+        click.echo(f"提示: 请确保已正确安装 kaka-auto", err=True)
         return
 
     click.echo(f"🚀 启动配置向导...")
@@ -82,7 +82,7 @@ def configure():
 
 
 @cli.command()
-@click.argument('action', type=click.Choice(['export', 'import']))
+@click.argument("action", type=click.Choice(["export", "import"]))
 def config(action):
     """导出或导入配置
 
@@ -91,7 +91,7 @@ def config(action):
     import json
     from pathlib import Path
 
-    if action == 'export':
+    if action == "export":
         try:
             from app.config import get_config
 
@@ -109,12 +109,12 @@ def config(action):
                     "default_branch": config.repository.default_branch,
                 },
                 "claude": {
-                    "api_key": config.claude.api_key if hasattr(config.claude, 'api_key') else "",
-                }
+                    "api_key": config.claude.api_key if hasattr(config.claude, "api_key") else "",
+                },
             }
 
-            config_file = Path.home() / 'kaka-config.json'
-            with open(config_file, 'w', encoding='utf-8') as f:
+            config_file = Path.home() / "kaka-config.json"
+            with open(config_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
             click.echo(f"✅ 配置已导出到: {config_file}")
@@ -122,15 +122,15 @@ def config(action):
         except Exception as e:
             click.echo(f"❌ 导出失败: {e}", err=True)
 
-    elif action == 'import':
-        config_file = Path.home() / 'kaka-config.json'
+    elif action == "import":
+        config_file = Path.home() / "kaka-config.json"
 
         if not config_file.exists():
             click.echo(f"❌ 配置文件不存在: {config_file}")
             return
 
         try:
-            with open(config_file, 'r', encoding='utf-8') as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             click.echo(f"📋 配置内容:")
@@ -171,7 +171,7 @@ def status():
 
 
 @cli.command()
-@click.option('--lines', default=20, help='显示的日志行数')
+@click.option("--lines", default=20, help="显示的日志行数")
 def logs(lines):
     """查看最近的日志
 
@@ -188,11 +188,11 @@ def logs(lines):
     try:
         import subprocess
 
-        subprocess.run(['tail', f'-n{lines}', str(log_file)])
+        subprocess.run(["tail", f"-n{lines}", str(log_file)])
 
     except Exception as e:
         click.echo(f"❌ 无法读取日志: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()

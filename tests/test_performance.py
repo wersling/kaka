@@ -129,6 +129,7 @@ def mock_github_labels():
 def mock_github_issue(mock_github_user, mock_github_labels):
     """创建模拟的 GitHub Issue 对象"""
     from datetime import datetime
+
     return GitHubIssue(
         id=1,
         node_id="issue1",
@@ -149,6 +150,7 @@ def mock_github_issue(mock_github_user, mock_github_labels):
 def mock_github_comment(mock_github_user):
     """创建模拟的 GitHub 评论对象"""
     from datetime import datetime
+
     return GitHubComment(
         id=456,
         node_id="comment1",
@@ -168,9 +170,7 @@ def mock_github_comment(mock_github_user):
 class TestPerformanceBaselines:
     """性能基准测试 - 建立性能基线"""
 
-    def test_webhook_signature_verification_performance(
-        self, benchmark, sample_webhook_payload
-    ):
+    def test_webhook_signature_verification_performance(self, benchmark, sample_webhook_payload):
         """测试 Webhook 签名验证性能
 
         目标: < 1ms (p95)
@@ -186,9 +186,7 @@ class TestPerformanceBaselines:
         signature = f"sha256={hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()}"
 
         # 基准测试
-        result = benchmark(
-            verify_webhook_signature, payload, signature, secret
-        )
+        result = benchmark(verify_webhook_signature, payload, signature, secret)
 
         # 验证正确性
         assert result is True
@@ -253,7 +251,7 @@ class TestPerformanceBaselines:
     ):
         """测试 Pydantic 模型验证性能"""
         from datetime import datetime
-        
+
         issue_data = {
             "id": 1,
             "node_id": "issue1",
@@ -449,11 +447,16 @@ class TestConcurrencyPerformance:
             # 创建事件数据副本
             issue_dict = mock_github_issue.model_dump()
             issue_dict["number"] = issue_number
-            
+
             event_data = {
                 "action": "labeled",
                 "issue": issue_dict,
-                "sender": {"login": "testuser", "id": 123, "avatar_url": "https://example.com", "type": "User"},
+                "sender": {
+                    "login": "testuser",
+                    "id": 123,
+                    "avatar_url": "https://example.com",
+                    "type": "User",
+                },
             }
             return await handler.handle_event("issues", event_data)
 
@@ -520,11 +523,16 @@ class TestConcurrencyPerformance:
             # 创建事件数据副本
             issue_dict = mock_github_issue.model_dump()
             issue_dict["number"] = issue_number
-            
+
             event_data = {
                 "action": "labeled",
                 "issue": issue_dict,
-                "sender": {"login": "testuser", "id": 123, "avatar_url": "https://example.com", "type": "User"},
+                "sender": {
+                    "login": "testuser",
+                    "id": 123,
+                    "avatar_url": "https://example.com",
+                    "type": "User",
+                },
             }
             return await handler.handle_event("issues", event_data)
 
@@ -581,6 +589,7 @@ class TestConcurrencyPerformance:
 
     def test_thread_safe_validators(self, benchmark):
         """测试验证器的线程安全性"""
+
         def validate_in_thread():
             return validate_issue_trigger("labeled", ["ai-dev", "bug"], "ai-dev")
 
@@ -594,15 +603,10 @@ class TestConcurrencyPerformance:
         results = [None] * num_threads
 
         def validate_worker(thread_id):
-            results[thread_id] = validate_issue_trigger(
-                "labeled", ["ai-dev"], "ai-dev"
-            )
+            results[thread_id] = validate_issue_trigger("labeled", ["ai-dev"], "ai-dev")
 
         # 并发执行
-        threads = [
-            threading.Thread(target=validate_worker, args=(i,))
-            for i in range(num_threads)
-        ]
+        threads = [threading.Thread(target=validate_worker, args=(i,)) for i in range(num_threads)]
 
         start_time = time.perf_counter()
         for t in threads:
@@ -664,7 +668,7 @@ class TestStressTesting:
                 event_data = {
                     "action": "labeled",
                     "issue": mock_github_issue.model_dump(),
-            "sender": mock_github_user.model_dump(),
+                    "sender": mock_github_user.model_dump(),
                 }
 
                 try:
@@ -732,9 +736,7 @@ class TestStressTesting:
 
         start_time = time.perf_counter()
 
-        tasks = [
-            handler.handle_event("issues", event_data) for _ in range(burst_size)
-        ]
+        tasks = [handler.handle_event("issues", event_data) for _ in range(burst_size)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         end_time = time.perf_counter()
@@ -856,6 +858,7 @@ class TestResourceUsage:
         def cpu_intensive_task():
             # 模拟 JSON 解析和验证
             import json
+
             data = {"x": list(range(1000))}
             for _ in range(100):
                 json_str = json.dumps(data)
@@ -930,6 +933,7 @@ class TestResourceUsage:
     @pytest.mark.asyncio
     async def test_network_io_simulation(self):
         """测试网络 I/O 性能（模拟）"""
+
         # 模拟网络延迟
         async def mock_network_call(delay):
             await asyncio.sleep(delay)
@@ -999,9 +1003,7 @@ class TestPerformanceRegression:
 
         # Mock 快速响应
         handler._init_services = Mock()
-        handler.claude_service = AsyncMock(
-            return_value={"success": True, "execution_time": 0.01}
-        )
+        handler.claude_service = AsyncMock(return_value={"success": True, "execution_time": 0.01})
         handler.git_service = Mock()
         handler.github_service = Mock()
 
@@ -1047,8 +1049,6 @@ def measure_cpu_usage():
         "user": cpu_times.user,
         "system": cpu_times.system,
     }
-
-
 
 
 # 可以通过以下命令运行性能测试：

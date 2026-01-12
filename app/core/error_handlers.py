@@ -39,8 +39,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
             JSONResponse: 错误响应
         """
         logger.error(
-            f"应用异常: {request.method} {request.url.path} - "
-            f"{exc.code.value}: {exc.message}",
+            f"应用异常: {request.method} {request.url.path} - " f"{exc.code.value}: {exc.message}",
             extra={
                 "error_code": exc.code.value,
                 "status_code": exc.status_code,
@@ -54,9 +53,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(StarletteHTTPException)
-    async def http_exception_handler(
-        request: Request, exc: StarletteHTTPException
-    ) -> JSONResponse:
+    async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         """
         处理 HTTP 异常
 
@@ -68,8 +65,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
             JSONResponse: 错误响应
         """
         logger.error(
-            f"HTTP 异常: {request.method} {request.url.path} - "
-            f"{exc.status_code}: {exc.detail}"
+            f"HTTP 异常: {request.method} {request.url.path} - " f"{exc.status_code}: {exc.detail}"
         )
 
         return JSONResponse(
@@ -107,9 +103,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
             }
             formatted_errors.append(formatted_error)
 
-        logger.error(
-            f"验证错误: {request.method} {request.url.path} - {formatted_errors}"
-        )
+        logger.error(f"验证错误: {request.method} {request.url.path} - {formatted_errors}")
 
         return JSONResponse(
             status_code=422,

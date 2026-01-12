@@ -86,9 +86,7 @@ class TestGitHubTokenPermissions:
         期望：抛出认证失败异常
         严重性：P0
         """
-        mock_github.side_effect = BadCredentialsException(
-            401, {"message": "Bad credentials"}
-        )
+        mock_github.side_effect = BadCredentialsException(401, {"message": "Bad credentials"})
 
         with patch.dict(
             os.environ,
@@ -139,9 +137,7 @@ class TestGitHubTokenPermissions:
 
             assert service.token is not None
 
-    def test_token_not_exposed_in_logs(
-        self, mock_github, mock_github_instance, caplog
-    ):
+    def test_token_not_exposed_in_logs(self, mock_github, mock_github_instance, caplog):
         """
         测试：Token 不应该暴露在日志中
 
@@ -249,9 +245,7 @@ class TestRepositoryAccessControl:
         """
         mock_github_instance = MagicMock()
         mock_github_instance.get_user.return_value.login = "test-user"
-        mock_github_instance.get_user.return_value.rate_limiting_remaining_hits = (
-            5000
-        )
+        mock_github_instance.get_user.return_value.rate_limiting_remaining_hits = 5000
         # 尝试访问不同仓库时抛出异常
         mock_github_instance.get_repo.side_effect = Exception(
             "Repository not found or access denied"
@@ -575,9 +569,7 @@ class TestOperationPermissions:
 
             assert pr_info["pr_number"] == 123
 
-    def test_comment_create_permission_required(
-        self, mock_github, mock_github_instance
-    ):
+    def test_comment_create_permission_required(self, mock_github, mock_github_instance):
         """
         测试：创建评论应该需要相应权限
 
@@ -617,9 +609,7 @@ class TestOperationPermissions:
         """
         mock_repo = MagicMock()
         # 模拟权限不足
-        mock_repo.create_pull.side_effect = Exception(
-            "Resource not accessible by integration"
-        )
+        mock_repo.create_pull.side_effect = Exception("Resource not accessible by integration")
 
         mock_github_instance.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_instance

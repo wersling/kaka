@@ -15,6 +15,7 @@ router = APIRouter()
 
 class ConfigStatusResponse(BaseModel):
     """配置状态响应"""
+
     configured: bool
     missing_keys: list[str] = []
     webhook_url: Optional[str] = None
@@ -42,6 +43,7 @@ async def get_config_status(request: Request) -> ConfigStatusResponse:
 
             # 生成 Webhook URL
             from app.utils.webhook import generate_webhook_url
+
             webhook_url = generate_webhook_url(request)
 
             repo_info = {
@@ -60,7 +62,7 @@ async def get_config_status(request: Request) -> ConfigStatusResponse:
             configured=is_configured,
             missing_keys=missing_keys,
             webhook_url=webhook_url,
-            repo_info=repo_info
+            repo_info=repo_info,
         )
 
     except Exception as e:
@@ -83,10 +85,7 @@ async def get_webhook_url(request: Request) -> dict:
 
         config = get_config()
 
-        return {
-            "url": generate_webhook_url(request),
-            "secret": config.github.webhook_secret
-        }
+        return {"url": generate_webhook_url(request), "secret": config.github.webhook_secret}
 
     except Exception as e:
         logger.error(f"获取 Webhook URL 失败: {e}", exc_info=True)

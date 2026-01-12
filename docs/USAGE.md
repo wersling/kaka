@@ -89,7 +89,7 @@ tail -f logs/ai-scheduler.log
 kaka logs
 
 # 使用开发模式启动（日志输出到控制台）
-./scripts/dev.sh
+kaka start --reload
 ```
 
 ### 日志级别

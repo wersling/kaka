@@ -264,8 +264,7 @@ class TestErrorMessageLeakage:
         """
         # 模拟数据库错误
         error_msg = (
-            "Connection to postgresql://user:pass@localhost/db failed: "
-            "connection refused"
+            "Connection to postgresql://user:pass@localhost/db failed: " "connection refused"
         )
 
         # 实际应用中，错误消息应该被清理
@@ -566,6 +565,7 @@ class TestThirdPartyIntegrationLeakage:
 
     # TODO: 添加其他第三方集成的安全测试
     # 例如：GitHub API 调用的日志记录等
+
 
 # =============================================================================
 # 临时文件和缓存泄露测试

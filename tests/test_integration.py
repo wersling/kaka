@@ -802,10 +802,7 @@ class TestConcurrentProcessing:
             events.append(event)
 
         # 并发执行
-        tasks = [
-            webhook_handler.handle_event(event_type="issues", data=event)
-            for event in events
-        ]
+        tasks = [webhook_handler.handle_event(event_type="issues", data=event) for event in events]
         results = await asyncio.gather(*tasks)
 
         # 验证所有结果都成功
@@ -840,6 +837,7 @@ class TestConcurrentProcessing:
 
         def create_branch_mock(issue_number):
             import time
+
             branch_name = f"ai/feature-{issue_number}-{int(time.time())}"
             branch_names.append(branch_name)
             return branch_name

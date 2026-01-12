@@ -13,6 +13,7 @@ import pytest
 
 # 导入验证函数
 import sys
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 from setup_env import (
     validate_github_token,
@@ -60,7 +61,7 @@ class TestValidateGithubTokenWithApi:
         token = "ghp_valid_token"
 
         # Mock GitHubService
-        with patch('setup_env.GitHubService') as mock_service_class:
+        with patch("setup_env.GitHubService") as mock_service_class:
             mock_service = AsyncMock()
             mock_service.authenticate.return_value = True
             mock_service_class.return_value = mock_service
@@ -77,7 +78,7 @@ class TestValidateGithubTokenWithApi:
         token = "ghp_invalid_token"
 
         # Mock GitHubService
-        with patch('setup_env.GitHubService') as mock_service_class:
+        with patch("setup_env.GitHubService") as mock_service_class:
             mock_service = AsyncMock()
             mock_service.authenticate.return_value = False
             mock_service_class.return_value = mock_service
@@ -93,9 +94,9 @@ class TestValidateGithubTokenWithApi:
         token = "ghp_bad_credentials"
 
         # Mock GitHubService 抛出 401 异常
-        with patch('setup_env.GitHubService') as mock_service_class:
+        with patch("setup_env.GitHubService") as mock_service_class:
             mock_service = AsyncMock()
-            mock_service.authenticate.side_effect = Exception("401 {\"message\": \"Bad credentials\"}")
+            mock_service.authenticate.side_effect = Exception('401 {"message": "Bad credentials"}')
             mock_service_class.return_value = mock_service
 
             is_valid, error_msg = await validate_github_token_with_api(token)
@@ -109,7 +110,7 @@ class TestValidateGithubTokenWithApi:
         token = "ghp_no_permission"
 
         # Mock GitHubService 抛出 403 异常
-        with patch('setup_env.GitHubService') as mock_service_class:
+        with patch("setup_env.GitHubService") as mock_service_class:
             mock_service = AsyncMock()
             mock_service.authenticate.side_effect = Exception("403 Forbidden")
             mock_service_class.return_value = mock_service
@@ -155,6 +156,7 @@ class TestValidateRepoPath:
         # 由于 tmp_path 可能不在 home 目录下，我们测试 expanduser 是否能正常工作
         # 这里我们测试当前工作目录（应该存在）
         import os
+
         cwd = os.getcwd()
 
         # 验证当前工作目录是一个 Git 仓库（因为我们在 kaka 项目中）
@@ -167,6 +169,7 @@ class TestValidateRepoPath:
     def test_tilde_path_with_current_dir(self):
         """测试 ~ 路径在当前项目目录中"""
         import os
+
         # 测试当前目录（应该是 Git 仓库）
         cwd = os.getcwd()
         is_valid, error_msg = validate_repo_path(cwd)
@@ -209,72 +212,72 @@ class TestWriteEnvFile:
         from setup_env import write_env_file
 
         config = {
-            'GITHUB_WEBHOOK_SECRET': 'test_secret_123',
-            'GITHUB_TOKEN': 'ghp_test_token',
-            'GITHUB_REPO_OWNER': 'testuser',
-            'GITHUB_REPO_NAME': 'testrepo',
-            'REPO_PATH': '/path/to/repo',
+            "GITHUB_WEBHOOK_SECRET": "test_secret_123",
+            "GITHUB_TOKEN": "ghp_test_token",
+            "GITHUB_REPO_OWNER": "testuser",
+            "GITHUB_REPO_NAME": "testrepo",
+            "REPO_PATH": "/path/to/repo",
         }
 
-        env_file = tmp_path / '.env'
+        env_file = tmp_path / ".env"
         write_env_file(config, env_file)
 
         assert env_file.exists()
 
         content = env_file.read_text()
-        assert 'GITHUB_WEBHOOK_SECRET=test_secret_123' in content
-        assert 'GITHUB_TOKEN=ghp_test_token' in content
-        assert 'GITHUB_REPO_OWNER=testuser' in content
-        assert 'GITHUB_REPO_NAME=testrepo' in content
-        assert 'REPO_PATH=/path/to/repo' in content
+        assert "GITHUB_WEBHOOK_SECRET=test_secret_123" in content
+        assert "GITHUB_TOKEN=ghp_test_token" in content
+        assert "GITHUB_REPO_OWNER=testuser" in content
+        assert "GITHUB_REPO_NAME=testrepo" in content
+        assert "REPO_PATH=/path/to/repo" in content
 
     def test_write_env_file_with_ngrok(self, tmp_path):
         """测试写入包含 ngrok 配置的 .env 文件"""
         from setup_env import write_env_file
 
         config = {
-            'GITHUB_WEBHOOK_SECRET': 'test_secret_123',
-            'GITHUB_TOKEN': 'ghp_test_token',
-            'GITHUB_REPO_OWNER': 'testuser',
-            'GITHUB_REPO_NAME': 'testrepo',
-            'REPO_PATH': '/path/to/repo',
-            'NGROK_AUTH_TOKEN': 'ngrok_token',
-            'NGROK_DOMAIN': 'mydomain.ngrok.io',
+            "GITHUB_WEBHOOK_SECRET": "test_secret_123",
+            "GITHUB_TOKEN": "ghp_test_token",
+            "GITHUB_REPO_OWNER": "testuser",
+            "GITHUB_REPO_NAME": "testrepo",
+            "REPO_PATH": "/path/to/repo",
+            "NGROK_AUTH_TOKEN": "ngrok_token",
+            "NGROK_DOMAIN": "mydomain.ngrok.io",
         }
 
-        env_file = tmp_path / '.env'
+        env_file = tmp_path / ".env"
         write_env_file(config, env_file)
 
         content = env_file.read_text()
-        assert 'NGROK_AUTH_TOKEN=ngrok_token' in content
-        assert 'NGROK_DOMAIN=mydomain.ngrok.io' in content
+        assert "NGROK_AUTH_TOKEN=ngrok_token" in content
+        assert "NGROK_DOMAIN=mydomain.ngrok.io" in content
 
     def test_overwrite_existing_env_file(self, tmp_path):
         """测试覆盖现有 .env 文件"""
         from setup_env import write_env_file
 
         # 创建现有的 .env 文件
-        env_file = tmp_path / '.env'
+        env_file = tmp_path / ".env"
         env_file.write_text("OLD_CONTENT")
 
         config = {
-            'GITHUB_WEBHOOK_SECRET': 'new_secret',
-            'GITHUB_TOKEN': 'ghp_new_token',
-            'GITHUB_REPO_OWNER': 'newuser',
-            'GITHUB_REPO_NAME': 'newrepo',
-            'REPO_PATH': '/new/path',
+            "GITHUB_WEBHOOK_SECRET": "new_secret",
+            "GITHUB_TOKEN": "ghp_new_token",
+            "GITHUB_REPO_OWNER": "newuser",
+            "GITHUB_REPO_NAME": "newrepo",
+            "REPO_PATH": "/new/path",
         }
 
         # Mock input 模拟用户确认覆盖
-        with patch('builtins.input', return_value='y'):
+        with patch("builtins.input", return_value="y"):
             write_env_file(config, env_file)
 
         # 验证备份文件已创建
-        backup_file = tmp_path / '.env.backup'
+        backup_file = tmp_path / ".env.backup"
         assert backup_file.exists()
         assert backup_file.read_text() == "OLD_CONTENT"
 
         # 验证新内容已写入
         new_content = env_file.read_text()
-        assert 'GITHUB_WEBHOOK_SECRET=new_secret' in new_content
-        assert 'OLD_CONTENT' not in new_content
+        assert "GITHUB_WEBHOOK_SECRET=new_secret" in new_content
+        assert "OLD_CONTENT" not in new_content

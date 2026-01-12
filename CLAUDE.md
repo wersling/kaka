@@ -35,9 +35,8 @@ kaka/
 │       └── validators.py       # Webhook 签名验证
 ├── config/
 │   └── config.yaml             # 配置文件
-├── scripts/
-│   ├── setup.sh                # 初始化脚本
-│   └── dev.sh                  # 开发启动脚本
+├── scripts/                    # 开发和测试脚本
+├── dev_setup.sh                # 开发环境初始化脚本
 ├── tests/                      # 测试套件
 ├── requirements.txt
 ├── pyproject.toml

@@ -147,9 +147,7 @@ def log_function_call(logger: Optional[logging.Logger] = None):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             _logger = logger or get_logger()
-            _logger.debug(
-                f"调用函数: {func.__name__}, 参数: args={args}, kwargs={kwargs}"
-            )
+            _logger.debug(f"调用函数: {func.__name__}, 参数: args={args}, kwargs={kwargs}")
             try:
                 result = func(*args, **kwargs)
                 _logger.debug(f"函数 {func.__name__} 执行成功")
@@ -175,9 +173,7 @@ def log_async_function_call(logger: Optional[logging.Logger] = None):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             _logger = logger or get_logger()
-            _logger.debug(
-                f"调用异步函数: {func.__name__}, 参数: args={args}, kwargs={kwargs}"
-            )
+            _logger.debug(f"调用异步函数: {func.__name__}, 参数: args={args}, kwargs={kwargs}")
             try:
                 result = await func(*args, **kwargs)
                 _logger.debug(f"异步函数 {func.__name__} 执行成功")

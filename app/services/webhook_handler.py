@@ -137,8 +137,7 @@ class WebhookHandler(LoggerMixin):
             issue = event.issue
 
             self.logger.info(
-                f"Issue 事件: action={action}, "
-                f"issue=#{issue.number} - {issue.title}"
+                f"Issue 事件: action={action}, " f"issue=#{issue.number} - {issue.title}"
             )
 
             # 检查触发条件
@@ -154,18 +153,14 @@ class WebhookHandler(LoggerMixin):
             )
 
             if not should_trigger:
-                self.logger.debug(
-                    f"Issue #{issue.number} 不满足触发条件"
-                )
+                self.logger.debug(f"Issue #{issue.number} 不满足触发条件")
                 return None
 
             # 触发 AI 开发（带并发控制）
             from app.utils.concurrency import ConcurrencyManager
 
             async with ConcurrencyManager():
-                self.logger.info(
-                    f"🔓 获取并发锁，开始处理 Issue #{issue.number}"
-                )
+                self.logger.info(f"🔓 获取并发锁，开始处理 Issue #{issue.number}")
                 return await self._trigger_ai_development(
                     issue_number=issue.number,
                     issue_title=issue.title,
@@ -198,10 +193,7 @@ class WebhookHandler(LoggerMixin):
             comment = event.comment
             issue = event.issue
 
-            self.logger.info(
-                f"Issue 评论事件: action={action}, "
-                f"issue=#{issue.number}"
-            )
+            self.logger.info(f"Issue 评论事件: action={action}, " f"issue=#{issue.number}")
 
             # 只处理新创建的评论
             if action != "created":
@@ -219,18 +211,14 @@ class WebhookHandler(LoggerMixin):
             )
 
             if not should_trigger:
-                self.logger.debug(
-                    f"评论不包含触发命令: {config.github.trigger_command}"
-                )
+                self.logger.debug(f"评论不包含触发命令: {config.github.trigger_command}")
                 return None
 
             # 触发 AI 开发（带并发控制）
             from app.utils.concurrency import ConcurrencyManager
 
             async with ConcurrencyManager():
-                self.logger.info(
-                    f"🔓 获取并发锁，开始处理 Issue #{issue.number}"
-                )
+                self.logger.info(f"🔓 获取并发锁，开始处理 Issue #{issue.number}")
                 return await self._trigger_ai_development(
                     issue_number=issue.number,
                     issue_title=issue.title,
@@ -305,7 +293,9 @@ class WebhookHandler(LoggerMixin):
 
                     # 更新状态为运行中
                     task_service.update_task_status(task_id, TaskStatus.RUNNING)
-                    task_service.add_task_log(task_id, "INFO", f"步骤 1/5: 创建特性分支完成:{branch_name}")
+                    task_service.add_task_log(
+                        task_id, "INFO", f"步骤 1/5: 创建特性分支完成:{branch_name}"
+                    )
 
                 except Exception as e:
                     self.logger.error(f"初始化任务失败: {e}", exc_info=True)
@@ -320,7 +310,9 @@ class WebhookHandler(LoggerMixin):
                 if not self.git_service.branch_exists(branch_name):
                     self.logger.warning(f"分支不存在，重新创建: {branch_name}")
                     branch_name = self.git_service.create_feature_branch(issue_number)
-                    task_service.add_task_log(task_id, "INFO", f"分支不存在，已重新创建: {branch_name}")
+                    task_service.add_task_log(
+                        task_id, "INFO", f"分支不存在，已重新创建: {branch_name}"
+                    )
                 else:
                     self.git_service.checkout_branch(branch_name)
                     task_service.add_task_log(task_id, "INFO", f"切换到现有分支: {branch_name}")
@@ -379,9 +371,7 @@ class WebhookHandler(LoggerMixin):
                     comment=f"❌ AI 开发失败: {error_msg}",
                 )
                 if not success:
-                    self.logger.warning(
-                        f"向 Issue #{issue_number} 发送失败通知失败"
-                    )
+                    self.logger.warning(f"向 Issue #{issue_number} 发送失败通知失败")
 
                 return TaskResult(
                     success=False,
@@ -399,9 +389,7 @@ class WebhookHandler(LoggerMixin):
             from app.config import get_config
 
             config = get_config()
-            commit_message = config.task.commit_template.format(
-                issue_title=issue_title
-            )
+            commit_message = config.task.commit_template.format(issue_title=issue_title)
 
             # 如果有未提交的变更，进行提交
             if self.git_service.has_changes():
@@ -439,13 +427,11 @@ class WebhookHandler(LoggerMixin):
                     development_summary=development_summary,
                 )
 
-                self.logger.info(
-                    f"✅ PR 创建成功: #{pr_info['pr_number']} - {pr_info['html_url']}"
-                )
+                self.logger.info(f"✅ PR 创建成功: #{pr_info['pr_number']} - {pr_info['html_url']}")
                 task_service.add_task_log(
                     task_id,
                     "INFO",
-                    f"✅ PR 创建成功: #{pr_info['pr_number']} - {pr_info['html_url']}"
+                    f"✅ PR 创建成功: #{pr_info['pr_number']} - {pr_info['html_url']}",
                 )
             except Exception as pr_error:
                 # 检查是否是 "No commits between" 错误
@@ -461,9 +447,7 @@ class WebhookHandler(LoggerMixin):
                         pr_info = existing_prs[0]
                         self.logger.info(f"找到已存在的 PR: #{pr_info['pr_number']}")
                         task_service.add_task_log(
-                            task_id,
-                            "INFO",
-                            f"找到已存在的 PR: #{pr_info['pr_number']}"
+                            task_id, "INFO", f"找到已存在的 PR: #{pr_info['pr_number']}"
                         )
                     else:
                         # 真的没有可创建的内容，返回部分成功的结果
@@ -505,9 +489,7 @@ class WebhookHandler(LoggerMixin):
                 comment=f"✅ AI 开发完成！已创建 PR: #{pr_info['pr_number']}，用时：{execution_time:.1f}秒",
             )
             if not success:
-                self.logger.warning(
-                    f"向 Issue #{issue_number} 发送 PR 链接失败"
-                )
+                self.logger.warning(f"向 Issue #{issue_number} 发送 PR 链接失败")
 
             # 更新任务状态为完成
             task_service.update_task_status(

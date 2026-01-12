@@ -39,11 +39,7 @@ def create_stream_json_message(msg_type: str, **kwargs) -> bytes:
 def create_assistant_message(text: str) -> bytes:
     """创建 assistant 消息"""
     return create_stream_json_message(
-        "assistant",
-        message={
-            "content": [{"type": "text", "text": text}],
-            "role": "assistant"
-        }
+        "assistant", message={"content": [{"type": "text", "text": text}], "role": "assistant"}
     )
 
 
@@ -94,7 +90,9 @@ def mock_process():
     """提供 Mock 的子进程对象"""
     process = AsyncMock()
     process.returncode = 0
-    process.communicate = AsyncMock(return_value=(b"", b""))  # 使用 communicate() 而不是 stdout.read()
+    process.communicate = AsyncMock(
+        return_value=(b"", b"")
+    )  # 使用 communicate() 而不是 stdout.read()
     process.kill = MagicMock()
     process.wait = AsyncMock()
     return process
@@ -120,9 +118,8 @@ class TestReturnCodeValidation:
         mock_process.returncode = 0
 
         # 模拟成功的 stream-json 输出
-        stdout_data = (
-            create_assistant_message("Success output") +
-            create_result_message(status="success")
+        stdout_data = create_assistant_message("Success output") + create_result_message(
+            status="success"
         )
         mock_process.communicate.return_value = (stdout_data, b"")
 
@@ -148,9 +145,8 @@ class TestReturnCodeValidation:
         mock_process.returncode = 1
 
         # 使用正确的 stream-json 格式（纯JSON，不是SSE格式）
-        stdout_data = (
-            create_assistant_message("Some output") +
-            create_result_message(status="success")
+        stdout_data = create_assistant_message("Some output") + create_result_message(
+            status="success"
         )
         mock_process.communicate.return_value = (stdout_data, b"")
 
@@ -171,9 +167,8 @@ class TestReturnCodeValidation:
         mock_process.returncode = 2
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output with misuse") +
-            create_result_message(status="success")
+        stdout_data = create_assistant_message("Output with misuse") + create_result_message(
+            status="success"
         )
         mock_process.communicate.return_value = (stdout_data, b"")
 
@@ -245,10 +240,7 @@ class TestResultStatusValidation:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         mock_process.communicate.return_value = (stdout_data, b"")
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
@@ -267,10 +259,7 @@ class TestResultStatusValidation:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="completed")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="completed")
         mock_process.communicate.return_value = (stdout_data, b"")
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
@@ -290,8 +279,8 @@ class TestResultStatusValidation:
 
         # 使用正确的 stream-json 格式（无 status 字段）
         stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message()  # 不传 status，会使用默认值
+            create_assistant_message("Output")
+            + create_result_message()  # 不传 status，会使用默认值
         )
         mock_process.communicate.return_value = (stdout_data, b"")
 
@@ -312,10 +301,7 @@ class TestResultStatusValidation:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="error")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="error")
         mock_process.communicate.return_value = (stdout_data, b"")
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
@@ -346,12 +332,11 @@ class TestErrorKeywordDetection:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         # 警告信息，不是错误（使用 Unicode 转义）
-        stderr_data = "Pre-flight check is taking longer\nRun with ANTHROPIC_LOG=debug\n\u26a0️ Warning\n".encode('utf-8')
+        stderr_data = "Pre-flight check is taking longer\nRun with ANTHROPIC_LOG=debug\n\u26a0️ Warning\n".encode(
+            "utf-8"
+        )
         mock_process.communicate.return_value = (stdout_data, stderr_data)
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
@@ -372,10 +357,7 @@ class TestErrorKeywordDetection:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         stderr_data = b"Error: Something went wrong\n"
         mock_process.communicate.return_value = (stdout_data, stderr_data)
 
@@ -397,10 +379,7 @@ class TestErrorKeywordDetection:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         stderr_data = b"Build failed\n"
         mock_process.communicate.return_value = (stdout_data, stderr_data)
 
@@ -420,10 +399,7 @@ class TestErrorKeywordDetection:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         stderr_data = b"Exception occurred\n"
         mock_process.communicate.return_value = (stdout_data, stderr_data)
 
@@ -443,10 +419,7 @@ class TestErrorKeywordDetection:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         stderr_data = b"Traceback (most recent call last):\n"
         mock_process.communicate.return_value = (stdout_data, stderr_data)
 
@@ -466,10 +439,7 @@ class TestErrorKeywordDetection:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         stderr_data = b"Critical error occurred\n"
         mock_process.communicate.return_value = (stdout_data, stderr_data)
 
@@ -489,10 +459,7 @@ class TestErrorKeywordDetection:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         # 混合警告和错误
         stderr_data = b"Warning message\nPre-flight check is taking longer\nError: failed\n"
         mock_process.communicate.return_value = (stdout_data, stderr_data)
@@ -513,10 +480,7 @@ class TestErrorKeywordDetection:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         # 3 行，都不是错误
         stderr_data = b"Line 1\nLine 2\nLine 3\n"
         mock_process.communicate.return_value = (stdout_data, stderr_data)
@@ -527,7 +491,9 @@ class TestErrorKeywordDetection:
             assert result["success"] is True
 
     @pytest.mark.asyncio
-    async def test_stderr_many_lines_without_error_keywords_exceeds_threshold(self, claude_service, mock_process):
+    async def test_stderr_many_lines_without_error_keywords_exceeds_threshold(
+        self, claude_service, mock_process
+    ):
         """
         测试：stderr 多行（>3行）不包含错误关键词应该失败
 
@@ -537,10 +503,7 @@ class TestErrorKeywordDetection:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="success")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="success")
         # 4 行，都不是明确的错误，但行数 > 3
         stderr_data = b"Line 1\nLine 2\nLine 3\nLine 4\n"
         mock_process.communicate.return_value = (stdout_data, stderr_data)
@@ -601,10 +564,7 @@ class TestFailureReasonLogging:
         mock_process.returncode = 5  # 不在允许范围
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="error")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="error")
         stderr_data = b"Error occurred\n"
         mock_process.communicate.return_value = (stdout_data, stderr_data)
 
@@ -631,10 +591,7 @@ class TestFailureReasonLogging:
         mock_process.returncode = 0
 
         # 使用正确的 stream-json 格式
-        stdout_data = (
-            create_assistant_message("Output") +
-            create_result_message(status="error")
-        )
+        stdout_data = create_assistant_message("Output") + create_result_message(status="error")
         mock_process.communicate.return_value = (stdout_data, b"")
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):

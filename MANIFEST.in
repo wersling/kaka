@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include app/templates *
+recursive-include config *.yaml.example
+recursive-include docs *.md

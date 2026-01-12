@@ -20,15 +20,16 @@ from typing import Optional
 
 class Colors:
     """终端颜色常量"""
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
 def print_header(text: str) -> None:
@@ -99,9 +100,9 @@ def input_yes_no(prompt: str, default: bool = False) -> bool:
         if not user_input:
             return default
 
-        if user_input in ['y', 'yes', '是', 'Y']:
+        if user_input in ["y", "yes", "是", "Y"]:
             return True
-        elif user_input in ['n', 'no', '否', 'N']:
+        elif user_input in ["n", "no", "否", "N"]:
             return False
 
         print_error("请输入 y/yes 或 n/no")
@@ -154,11 +155,11 @@ def validate_github_token(token: str) -> bool:
         是否有效
     """
     # Classic token 格式：ghp_ 后跟至少 32 个字符
-    if token.startswith('ghp_') and len(token) >= 36:
+    if token.startswith("ghp_") and len(token) >= 36:
         return True
 
     # Fine-grained token 格式：github_pat_ 后跟至少 62 个字符
-    if token.startswith('github_pat_') and len(token) >= 73:
+    if token.startswith("github_pat_") and len(token) >= 73:
         return True
 
     return False
@@ -229,7 +230,7 @@ async def setup_github_config() -> dict:
         is_valid, error_msg = await validate_github_token_with_api(token)
 
         if is_valid:
-            config['GITHUB_TOKEN'] = token
+            config["GITHUB_TOKEN"] = token
             print_success("GitHub Token 验证通过")
             break
         else:
@@ -248,22 +249,27 @@ async def setup_github_config() -> dict:
     if use_url:
         # 通过 URL 解析
         while True:
-            url = input_required("请输入 GitHub 仓库 URL (例如: https://github.com/octocat/Hello-World)").strip()
+            url = input_required(
+                "请输入 GitHub 仓库 URL (例如: https://github.com/octocat/Hello-World)"
+            ).strip()
 
             # 移除末尾的 .git
-            if url.endswith('.git'):
+            if url.endswith(".git"):
                 url = url[:-4]
 
             # 解析 URL
             # 支持 https://github.com/owner/repo 和 github.com/owner/repo 格式
             import re
-            pattern = r'(?:https?://)?github\.com/([^/]+)/([^/]+)/?'
+
+            pattern = r"(?:https?://)?github\.com/([^/]+)/([^/]+)/?"
             match = re.match(pattern, url)
 
             if match:
-                config['GITHUB_REPO_OWNER'] = match.group(1)
-                config['GITHUB_REPO_NAME'] = match.group(2)
-                print_success(f"解析成功: {config['GITHUB_REPO_OWNER']} / {config['GITHUB_REPO_NAME']}")
+                config["GITHUB_REPO_OWNER"] = match.group(1)
+                config["GITHUB_REPO_NAME"] = match.group(2)
+                print_success(
+                    f"解析成功: {config['GITHUB_REPO_OWNER']} / {config['GITHUB_REPO_NAME']}"
+                )
                 break
             else:
                 print_error("无法解析 GitHub URL，请检查格式是否正确")
@@ -280,9 +286,9 @@ async def setup_github_config() -> dict:
         print()
 
     # 如果通过 URL 解析失败或用户选择手动输入
-    if 'GITHUB_REPO_OWNER' not in config:
-        config['GITHUB_REPO_OWNER'] = input_required("请输入仓库所有者用户名 (GITHUB_REPO_OWNER)")
-        config['GITHUB_REPO_NAME'] = input_required("请输入仓库名称 (GITHUB_REPO_NAME)")
+    if "GITHUB_REPO_OWNER" not in config:
+        config["GITHUB_REPO_OWNER"] = input_required("请输入仓库所有者用户名 (GITHUB_REPO_OWNER)")
+        config["GITHUB_REPO_NAME"] = input_required("请输入仓库名称 (GITHUB_REPO_NAME)")
 
     print()
 
@@ -295,13 +301,13 @@ async def setup_github_config() -> dict:
     use_auto_secret = input_yes_no("是否自动生成 Webhook Secret？", default=True)
 
     if use_auto_secret:
-        config['GITHUB_WEBHOOK_SECRET'] = generate_webhook_secret()
+        config["GITHUB_WEBHOOK_SECRET"] = generate_webhook_secret()
         print_success(f"已自动生成 Webhook Secret: {config['GITHUB_WEBHOOK_SECRET'][:16]}...")
     else:
         while True:
             secret = input_required("请输入 Webhook Secret (至少 64 个字符)")
             if len(secret) >= 64:
-                config['GITHUB_WEBHOOK_SECRET'] = secret
+                config["GITHUB_WEBHOOK_SECRET"] = secret
                 print_success("Webhook Secret 已设置")
                 break
             else:
@@ -335,7 +341,7 @@ async def setup_repo_path() -> dict:
         if is_valid:
             # 使用 os.path.expanduser() 确保路径展开健壮性
             expanded_path = os.path.expanduser(path)
-            config['REPO_PATH'] = str(Path(expanded_path).resolve())
+            config["REPO_PATH"] = str(Path(expanded_path).resolve())
             print_success(f"仓库路径验证通过: {config['REPO_PATH']}")
             break
         else:
@@ -380,7 +386,7 @@ async def setup_ngrok() -> dict:
     print("    2. 登录后复制 authtoken")
     print()
 
-    config['NGROK_AUTH_TOKEN'] = input_required("请输入 ngrok authtoken")
+    config["NGROK_AUTH_TOKEN"] = input_required("请输入 ngrok authtoken")
 
     # ngrok domain (可选)
     print_info("ngrok 固定域名（可选）")
@@ -390,7 +396,7 @@ async def setup_ngrok() -> dict:
 
     domain = input("请输入 ngrok 固定域名（可选，直接回车跳过）: ").strip()
     if domain:
-        config['NGROK_DOMAIN'] = domain
+        config["NGROK_DOMAIN"] = domain
 
     print()
     print_success("ngrok 配置完成")
@@ -417,31 +423,40 @@ def write_env_file(config: dict, env_file: Path) -> None:
             return
 
         # 备份现有文件
-        backup_file = env_file.with_suffix('.backup')
+        backup_file = env_file.with_suffix(".backup")
         import shutil
+
         shutil.copy(env_file, backup_file)
         print_success(f"已备份现有配置到: {backup_file}")
 
     # 写入配置
-    with open(env_file, 'w', encoding='utf-8') as f:
+    with open(env_file, "w", encoding="utf-8") as f:
         f.write("# ============================================================================\n")
         f.write("# AI 开发调度服务 - 环境变量配置\n")
         f.write("# ============================================================================\n")
         f.write("#\n")
         f.write("# 此文件由 scripts/setup_env.py 自动生成\n")
-        f.write("# 生成时间: " + __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "\n")
+        f.write(
+            "# 生成时间: "
+            + __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            + "\n"
+        )
         f.write("#\n")
         f.write("# ⚠️  重要提醒：\n")
         f.write("#   - 永远不要将 .env 文件提交到 Git 仓库\n")
         f.write("#   - 确保 .env 已添加到 .gitignore\n")
         f.write("#   - 定期轮换 API 密钥和 Token\n")
         f.write("#\n")
-        f.write("# ============================================================================\n\n")
+        f.write(
+            "# ============================================================================\n\n"
+        )
 
         # GitHub 配置
         f.write("# ----------------------------------------------------------------------------\n")
         f.write("# GitHub 配置\n")
-        f.write("# ----------------------------------------------------------------------------\n\n")
+        f.write(
+            "# ----------------------------------------------------------------------------\n\n"
+        )
         f.write(f"GITHUB_WEBHOOK_SECRET={config.get('GITHUB_WEBHOOK_SECRET', '')}\n")
         f.write(f"GITHUB_TOKEN={config.get('GITHUB_TOKEN', '')}\n")
         f.write(f"GITHUB_REPO_OWNER={config.get('GITHUB_REPO_OWNER', '')}\n")
@@ -450,16 +465,22 @@ def write_env_file(config: dict, env_file: Path) -> None:
         # 仓库路径
         f.write("# ----------------------------------------------------------------------------\n")
         f.write("# 本地代码仓库路径\n")
-        f.write("# ----------------------------------------------------------------------------\n\n")
+        f.write(
+            "# ----------------------------------------------------------------------------\n\n"
+        )
         f.write(f"REPO_PATH={config.get('REPO_PATH', '')}\n\n")
 
         # ngrok 配置（如果有）
-        if 'NGROK_AUTH_TOKEN' in config:
-            f.write("# ----------------------------------------------------------------------------\n")
+        if "NGROK_AUTH_TOKEN" in config:
+            f.write(
+                "# ----------------------------------------------------------------------------\n"
+            )
             f.write("# ngrok 配置\n")
-            f.write("# ----------------------------------------------------------------------------\n\n")
+            f.write(
+                "# ----------------------------------------------------------------------------\n\n"
+            )
             f.write(f"NGROK_AUTH_TOKEN={config.get('NGROK_AUTH_TOKEN', '')}\n")
-            if 'NGROK_DOMAIN' in config:
+            if "NGROK_DOMAIN" in config:
                 f.write(f"NGROK_DOMAIN={config.get('NGROK_DOMAIN', '')}\n")
             f.write("\n")
 
@@ -471,9 +492,9 @@ def print_github_webhook_guide(config: dict) -> None:
     """打印 GitHub Webhook 配置详细指南"""
     print_header("GitHub Webhook 配置指南")
 
-    webhook_secret = config.get('GITHUB_WEBHOOK_SECRET', '')
-    repo_owner = config.get('GITHUB_REPO_OWNER', '')
-    repo_name = config.get('GITHUB_REPO_NAME', '')
+    webhook_secret = config.get("GITHUB_WEBHOOK_SECRET", "")
+    repo_owner = config.get("GITHUB_REPO_OWNER", "")
+    repo_name = config.get("GITHUB_REPO_NAME", "")
 
     print_info("步骤 1: 访问 GitHub 仓库设置")
     print(f"   1. 打开浏览器，访问: https://github.com/{repo_owner}/{repo_name}")
@@ -489,10 +510,10 @@ def print_github_webhook_guide(config: dict) -> None:
     print()
 
     # Webhook URL
-    if 'NGROK_AUTH_TOKEN' in config:
+    if "NGROK_AUTH_TOKEN" in config:
         print(f"   {Colors.BOLD}Payload URL{Colors.ENDC}")
         print("     格式: https://<your-ngrok-domain>/webhook/github")
-        if 'NGROK_DOMAIN' in config:
+        if "NGROK_DOMAIN" in config:
             print(f"     示例: https://{config.get('NGROK_DOMAIN')}/webhook/github")
         else:
             print("     示例: https://abc123.ngrok.io/webhook/github")
@@ -555,16 +576,16 @@ def print_next_steps(config: dict) -> None:
     print()
 
     print("1️⃣  验证配置")
-    print("   $ python -c \"from app.config import load_config; print(load_config())\"")
+    print('   $ python -c "from app.config import load_config; print(load_config())"')
     print()
 
     print("2️⃣  启动服务")
-    print("   $ ./scripts/dev.sh")
+    print("   $ kaka start")
     print()
 
     # 如果配置了 ngrok
     repo_full = f"{config.get('GITHUB_REPO_OWNER', '')}/{config.get('GITHUB_REPO_NAME', '')}"
-    if 'NGROK_AUTH_TOKEN' in config:
+    if "NGROK_AUTH_TOKEN" in config:
         print("3️⃣  启动 ngrok（新终端）")
         print("   $ ngrok http 8000")
         print("   复制显示的转发 URL（例如 https://abc123.ngrok.io）")
@@ -635,15 +656,16 @@ async def main():
     config.update(ngrok_config)
 
     # 写入 .env 文件
-    env_file = Path(__file__).parent.parent / '.env'
+    env_file = Path(__file__).parent.parent / ".env"
     write_env_file(config, env_file)
 
     # 打印后续步骤
     print_next_steps(config)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import asyncio
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
@@ -654,5 +676,6 @@ if __name__ == '__main__':
         print()
         print_error(f"配置失败: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

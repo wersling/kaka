@@ -223,6 +223,7 @@ class TestHealthCheckIntegration:
 
         # 等待一小段时间
         import asyncio
+
         await asyncio.sleep(0.1)
 
         response2 = await async_client.get("/health")
@@ -240,9 +241,7 @@ class TestHealthCheckComponents:
         """测试配置检查组件"""
         with patch("app.api.health.check_config") as mock_check:
             mock_check.return_value = MagicMock(
-                healthy=True,
-                message="配置正常",
-                details={"configured": True}
+                healthy=True, message="配置正常", details={"configured": True}
             )
 
             response = await async_client.get("/health")
@@ -255,9 +254,7 @@ class TestHealthCheckComponents:
         """测试 Git 检查组件"""
         with patch("app.api.health.check_git_repository") as mock_check:
             mock_check.return_value = MagicMock(
-                healthy=True,
-                message="Git 仓库正常",
-                details={"configured": True}
+                healthy=True, message="Git 仓库正常", details={"configured": True}
             )
 
             response = await async_client.get("/health")
@@ -270,9 +267,7 @@ class TestHealthCheckComponents:
         """测试 Claude CLI 检查组件"""
         with patch("app.api.health.check_claude_cli") as mock_check:
             mock_check.return_value = MagicMock(
-                healthy=True,
-                message="Claude CLI 正常",
-                details={"path": "/usr/bin/claude"}
+                healthy=True, message="Claude CLI 正常", details={"path": "/usr/bin/claude"}
             )
 
             response = await async_client.get("/health")

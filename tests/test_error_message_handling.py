@@ -209,9 +209,7 @@ class TestErrorMessageHandling:
 
             # 验证没有省略标记
             warning_logs = [
-                record.message
-                for record in caplog.records
-                if record.levelname == "WARNING"
+                record.message for record in caplog.records if record.levelname == "WARNING"
             ]
             for log in warning_logs:
                 if "失败" in log:
@@ -259,9 +257,7 @@ class TestErrorMessageHandling:
 
             # 验证 WARNING 日志包含截断的错误
             warning_logs = [
-                record.message
-                for record in caplog.records
-                if record.levelname == "WARNING"
+                record.message for record in caplog.records if record.levelname == "WARNING"
             ]
             truncated_log = next(
                 (log for log in warning_logs if "失败" in log and "... (已截断)" in log),

@@ -3,7 +3,17 @@ Database Models for Task Monitoring
 使用 SQLAlchemy ORM 定义数据表结构
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, Float, Boolean, ForeignKey, Enum as SQLEnum
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    Text,
+    Float,
+    Boolean,
+    ForeignKey,
+    Enum as SQLEnum,
+)
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -11,6 +21,7 @@ import enum
 
 class TaskStatus(enum.Enum):
     """任务状态枚举"""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -20,11 +31,14 @@ class TaskStatus(enum.Enum):
 
 class Task(object):
     """任务表 - 存储所有AI开发任务"""
+
     __tablename__ = "tasks"
 
     # 主键和基本信息
     id = Column(Integer, primary_key=True, autoincrement=True)
-    task_id = Column(String(255), unique=True, nullable=False, index=True)  # task-{issue_number}-{timestamp}
+    task_id = Column(
+        String(255), unique=True, nullable=False, index=True
+    )  # task-{issue_number}-{timestamp}
     issue_number = Column(Integer, nullable=False, index=True)
     issue_title = Column(String(500), nullable=False)
     issue_url = Column(String(1000), nullable=False)
@@ -85,6 +99,7 @@ class Task(object):
 
 class TaskLog(object):
     """任务日志表 - 存储任务执行日志"""
+
     __tablename__ = "task_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -114,14 +129,18 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
+
 # 重新定义模型继承 Base
 class Task(Base):
     """任务表 - 存储所有AI开发任务"""
+
     __tablename__ = "tasks"
 
     # 主键和基本信息
     id = Column(Integer, primary_key=True, autoincrement=True)
-    task_id = Column(String(255), unique=True, nullable=False, index=True)  # task-{issue_number}-{timestamp}
+    task_id = Column(
+        String(255), unique=True, nullable=False, index=True
+    )  # task-{issue_number}-{timestamp}
     issue_number = Column(Integer, nullable=False, index=True)
     issue_title = Column(String(500), nullable=False)
     issue_url = Column(String(1000), nullable=False)
@@ -182,6 +201,7 @@ class Task(Base):
 
 class TaskLog(Base):
     """任务日志表 - 存储任务执行日志"""
+
     __tablename__ = "task_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)

@@ -106,7 +106,7 @@ def issues_event_data(github_issue, github_user):
     """提供测试用的 issues 事件数据"""
     return {
         "action": "labeled",
-        "issue": github_issue.model_dump(mode='json'),
+        "issue": github_issue.model_dump(mode="json"),
         "label": {
             "id": 2,
             "node_id": "label2",
@@ -114,7 +114,7 @@ def issues_event_data(github_issue, github_user):
             "color": "0366d6",
             "default": False,
         },
-        "sender": github_user.model_dump(mode='json'),
+        "sender": github_user.model_dump(mode="json"),
     }
 
 
@@ -123,17 +123,17 @@ def issue_comment_event_data(github_issue, github_user):
     """提供测试用的 issue_comment 事件数据"""
     return {
         "action": "created",
-        "issue": github_issue.model_dump(mode='json'),
+        "issue": github_issue.model_dump(mode="json"),
         "comment": {
             "id": 456,
             "node_id": "comment1",
-            "user": github_user.model_dump(mode='json'),
+            "user": github_user.model_dump(mode="json"),
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
             "body": "This is a test comment with /ai develop command",
             "html_url": "https://github.com/test_owner/test_repo/issues/123#issuecomment-456",
         },
-        "sender": github_user.model_dump(mode='json'),
+        "sender": github_user.model_dump(mode="json"),
     }
 
 
@@ -161,6 +161,7 @@ def ping_event_data():
 @pytest.fixture
 def webhook_helper(webhook_secret):
     """提供 webhook 测试辅助函数"""
+
     def make_headers_and_payload(event_data, event_type="issues"):
         """生成签名头部和 JSON 载荷"""
         json_payload = json.dumps(event_data)
@@ -237,9 +238,7 @@ class TestRootEndpoint:
         期望：响应包含正确的 CORS 头部
         注意：在测试环境中 CORS 中间件可能不会添加头部，因为测试请求不包含 Origin 头
         """
-        response = await async_client.get(
-            "/", headers={"Origin": "http://localhost:3000"}
-        )
+        response = await async_client.get("/", headers={"Origin": "http://localhost:3000"})
 
         # 注意：CORS 头部可能不会出现在所有响应中
         # 这取决于请求是否包含 Origin 头
@@ -263,11 +262,11 @@ class TestHealthEndpoint:
         场景：发送 GET 请求到 /health
         期望：返回 200 状态码
         """
-        with patch("app.api.health.check_config") as mock_check_config, patch(
-            "app.api.health.check_git_repository"
-        ) as mock_check_git, patch(
-            "app.api.health.check_claude_cli"
-        ) as mock_check_claude:
+        with (
+            patch("app.api.health.check_config") as mock_check_config,
+            patch("app.api.health.check_git_repository") as mock_check_git,
+            patch("app.api.health.check_claude_cli") as mock_check_claude,
+        ):
 
             # Mock 所有检查返回健康状态
             mock_check_config.return_value = MagicMock(
@@ -287,33 +286,34 @@ class TestHealthEndpoint:
             assert response.status_code == status.HTTP_200_OK
 
     @pytest.mark.asyncio
-    async def test_health_check_returns_503_when_unhealthy(
-        self, async_client, mock_config
-    ):
+    async def test_health_check_returns_503_when_unhealthy(self, async_client, mock_config):
         """
         测试：健康检查在服务不健康时返回 503
 
         场景：某个依赖检查失败
         期望：返回 503 状态码
         """
-        with patch("app.api.health.check_config") as mock_check_config, patch(
-            "app.api.health.check_git_repository"
-        ) as mock_check_git, patch(
-            "app.api.health.check_claude_cli"
-        ) as mock_check_claude:
+        with (
+            patch("app.api.health.check_config") as mock_check_config,
+            patch("app.api.health.check_git_repository") as mock_check_git,
+            patch("app.api.health.check_claude_cli") as mock_check_claude,
+        ):
 
             # Mock 配置检查失败（返回字典而不是 model_dump）
             mock_check_config.return_value = MagicMock(
-                healthy=False, message="配置未加载",
-                model_dump=lambda: {"healthy": False, "message": "配置未加载"}
+                healthy=False,
+                message="配置未加载",
+                model_dump=lambda: {"healthy": False, "message": "配置未加载"},
             )
             mock_check_git.return_value = MagicMock(
-                healthy=True, message="Git 仓库正常",
-                model_dump=lambda: {"healthy": True, "message": "Git 仓库正常"}
+                healthy=True,
+                message="Git 仓库正常",
+                model_dump=lambda: {"healthy": True, "message": "Git 仓库正常"},
             )
             mock_check_claude.return_value = MagicMock(
-                healthy=True, message="Claude Code CLI 已安装",
-                model_dump=lambda: {"healthy": True, "message": "Claude Code CLI 已安装"}
+                healthy=True,
+                message="Claude Code CLI 已安装",
+                model_dump=lambda: {"healthy": True, "message": "Claude Code CLI 已安装"},
             )
 
             # 由于健康检查会抛出 HTTPException，我们需要捕获它
@@ -334,11 +334,11 @@ class TestHealthEndpoint:
         场景：发送 GET 请求到 /health
         期望：响应包含 status、service、version、timestamp、uptime_seconds、checks
         """
-        with patch("app.api.health.check_config") as mock_check_config, patch(
-            "app.api.health.check_git_repository"
-        ) as mock_check_git, patch(
-            "app.api.health.check_claude_cli"
-        ) as mock_check_claude:
+        with (
+            patch("app.api.health.check_config") as mock_check_config,
+            patch("app.api.health.check_git_repository") as mock_check_git,
+            patch("app.api.health.check_claude_cli") as mock_check_claude,
+        ):
 
             # Mock 所有检查返回健康状态
             mock_check_config.return_value = MagicMock(
@@ -377,11 +377,11 @@ class TestHealthEndpoint:
         场景：所有依赖检查都通过
         期望：status 字段为 "healthy"
         """
-        with patch("app.api.health.check_config") as mock_check_config, patch(
-            "app.api.health.check_git_repository"
-        ) as mock_check_git, patch(
-            "app.api.health.check_claude_cli"
-        ) as mock_check_claude:
+        with (
+            patch("app.api.health.check_config") as mock_check_config,
+            patch("app.api.health.check_git_repository") as mock_check_git,
+            patch("app.api.health.check_claude_cli") as mock_check_claude,
+        ):
 
             # Mock 所有检查返回健康状态
             mock_check_config.return_value = MagicMock(
@@ -409,20 +409,22 @@ class TestHealthEndpoint:
         场景：某个依赖检查失败
         期望：status 字段为 "unhealthy"
         """
-        with patch("app.api.health.check_config") as mock_check_config, patch(
-            "app.api.health.check_git_repository"
-        ) as mock_check_git, patch(
-            "app.api.health.check_claude_cli"
-        ) as mock_check_claude:
+        with (
+            patch("app.api.health.check_config") as mock_check_config,
+            patch("app.api.health.check_git_repository") as mock_check_git,
+            patch("app.api.health.check_claude_cli") as mock_check_claude,
+        ):
 
             # Mock 配置检查失败
             mock_check_config.return_value = MagicMock(
-                healthy=False, message="配置未加载",
-                model_dump=lambda: {"healthy": False, "message": "配置未加载"}
+                healthy=False,
+                message="配置未加载",
+                model_dump=lambda: {"healthy": False, "message": "配置未加载"},
             )
             mock_check_git.return_value = MagicMock(
-                healthy=True, message="Git 仓库正常",
-                model_dump=lambda: {"healthy": True, "message": "Git 仓库正常"}
+                healthy=True,
+                message="Git 仓库正常",
+                model_dump=lambda: {"healthy": True, "message": "Git 仓库正常"},
             )
             mock_check_claude.return_value = MagicMock(
                 healthy=True,
@@ -456,11 +458,11 @@ class TestHealthEndpoint:
         场景：连续调用健康检查
         期望：uptime_seconds 递增
         """
-        with patch("app.api.health.check_config") as mock_check_config, patch(
-            "app.api.health.check_git_repository"
-        ) as mock_check_git, patch(
-            "app.api.health.check_claude_cli"
-        ) as mock_check_claude:
+        with (
+            patch("app.api.health.check_config") as mock_check_config,
+            patch("app.api.health.check_git_repository") as mock_check_git,
+            patch("app.api.health.check_claude_cli") as mock_check_claude,
+        ):
 
             # Mock 所有检查返回健康状态
             mock_check_config.return_value = MagicMock(
@@ -507,9 +509,10 @@ class TestWebhookEndpoint:
         """
         headers, json_payload = webhook_helper(issues_event_data, "issues")
 
-        with patch("app.config.get_config", return_value=mock_config), patch(
-            "app.services.webhook_handler.WebhookHandler"
-        ) as mock_handler:
+        with (
+            patch("app.config.get_config", return_value=mock_config),
+            patch("app.services.webhook_handler.WebhookHandler") as mock_handler,
+        ):
 
             # Mock handler 处理事件
             mock_handler_instance = MagicMock()
@@ -560,9 +563,7 @@ class TestWebhookEndpoint:
             assert "Invalid signature" in data["message"]
 
     @pytest.mark.asyncio
-    async def test_webhook_missing_signature(
-        self, async_client, issues_event_data, mock_config
-    ):
+    async def test_webhook_missing_signature(self, async_client, issues_event_data, mock_config):
         """
         测试：缺失签名返回 401
 
@@ -594,9 +595,10 @@ class TestWebhookEndpoint:
         """
         headers, json_payload = webhook_helper(issues_event_data, "issues")
 
-        with patch("app.config.get_config", return_value=mock_config), patch(
-            "app.services.webhook_handler.WebhookHandler"
-        ) as mock_handler:
+        with (
+            patch("app.config.get_config", return_value=mock_config),
+            patch("app.services.webhook_handler.WebhookHandler") as mock_handler,
+        ):
 
             # Mock handler 处理事件
             mock_handler_instance = MagicMock()
@@ -636,9 +638,10 @@ class TestWebhookEndpoint:
         """
         headers, json_payload = webhook_helper(issue_comment_event_data, "issue_comment")
 
-        with patch("app.config.get_config", return_value=mock_config), patch(
-            "app.services.webhook_handler.WebhookHandler"
-        ) as mock_handler:
+        with (
+            patch("app.config.get_config", return_value=mock_config),
+            patch("app.services.webhook_handler.WebhookHandler") as mock_handler,
+        ):
 
             # Mock handler 处理事件
             mock_handler_instance = MagicMock()
@@ -675,9 +678,10 @@ class TestWebhookEndpoint:
         """
         headers, json_payload = webhook_helper(ping_event_data, "ping")
 
-        with patch("app.config.get_config", return_value=mock_config), patch(
-            "app.services.webhook_handler.WebhookHandler"
-        ) as mock_handler:
+        with (
+            patch("app.config.get_config", return_value=mock_config),
+            patch("app.services.webhook_handler.WebhookHandler") as mock_handler,
+        ):
 
             # Mock handler 处理事件
             mock_handler_instance = MagicMock()
@@ -710,9 +714,10 @@ class TestWebhookEndpoint:
         push_event = {"ref": "refs/heads/main", "repository": {"name": "test_repo"}}
         headers, json_payload = webhook_helper(push_event, "push")
 
-        with patch("app.config.get_config", return_value=mock_config), patch(
-            "app.services.webhook_handler.WebhookHandler"
-        ) as mock_handler:
+        with (
+            patch("app.config.get_config", return_value=mock_config),
+            patch("app.services.webhook_handler.WebhookHandler") as mock_handler,
+        ):
 
             # Mock handler 返回 None（不支持的事件）
             mock_handler_instance = MagicMock()
@@ -740,9 +745,10 @@ class TestWebhookEndpoint:
 
         headers, json_payload = webhook_helper(issues_event_data, "issues")
 
-        with patch("app.config.get_config", return_value=mock_config), patch(
-            "app.services.webhook_handler.WebhookHandler"
-        ) as mock_handler:
+        with (
+            patch("app.config.get_config", return_value=mock_config),
+            patch("app.services.webhook_handler.WebhookHandler") as mock_handler,
+        ):
 
             # Mock handler 处理需要时间
             async def slow_handler(*args, **kwargs):
@@ -778,9 +784,10 @@ class TestWebhookEndpoint:
         """
         headers, json_payload = webhook_helper(issues_event_data, "issues")
 
-        with patch("app.config.get_config", return_value=mock_config), patch(
-            "app.services.webhook_handler.WebhookHandler"
-        ) as mock_handler:
+        with (
+            patch("app.config.get_config", return_value=mock_config),
+            patch("app.services.webhook_handler.WebhookHandler") as mock_handler,
+        ):
 
             # Mock handler
             mock_handler_instance = MagicMock()
@@ -813,9 +820,10 @@ class TestWebhookEndpoint:
         """
         headers, json_payload = webhook_helper(issues_event_data, "issues")
 
-        with patch("app.config.get_config", return_value=mock_config), patch(
-            "app.services.webhook_handler.WebhookHandler"
-        ) as mock_handler:
+        with (
+            patch("app.config.get_config", return_value=mock_config),
+            patch("app.services.webhook_handler.WebhookHandler") as mock_handler,
+        ):
 
             # Mock handler
             mock_handler_instance = MagicMock()
@@ -1012,8 +1020,10 @@ class TestMiddleware:
 
         # 较慢请求（通过健康检查）
         with patch("app.api.health.check_config") as mock_check:
+
             async def slow_check():
                 import asyncio
+
                 await asyncio.sleep(0.01)
                 return MagicMock(healthy=True, model_dump=lambda: {})
 
@@ -1033,10 +1043,7 @@ class TestMiddleware:
         期望：CORS 和 Timing 中间件都被应用
         """
         # 发送带有 Origin 头的请求以触发 CORS
-        response = await async_client.get(
-            "/",
-            headers={"Origin": "http://localhost:3000"}
-        )
+        response = await async_client.get("/", headers={"Origin": "http://localhost:3000"})
 
         # 检查 Timing 头部（应该总是存在）
         assert "X-Process-Time" in response.headers

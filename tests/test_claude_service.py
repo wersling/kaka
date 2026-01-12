@@ -179,9 +179,7 @@ class TestBuildPrompt:
         issue_body = "Implement a test feature"
         issue_number = 123
 
-        prompt = claude_service._build_prompt(
-            issue_url, issue_title, issue_body, issue_number
-        )
+        prompt = claude_service._build_prompt(issue_url, issue_title, issue_body, issue_number)
 
         assert f"Issue #{issue_number}" in prompt
         assert issue_title in prompt
@@ -764,7 +762,11 @@ class TestExecuteClaude:
             with caplog.at_level("DEBUG"):
                 await claude_service._execute_claude("Test prompt")
 
-                assert any("Claude 输出:" in record.message for record in caplog.records if record.levelname == "DEBUG")
+                assert any(
+                    "Claude 输出:" in record.message
+                    for record in caplog.records
+                    if record.levelname == "DEBUG"
+                )
 
     @pytest.mark.asyncio
     async def test_execute_claude_logs_errors(self, claude_service, mock_process, caplog):
@@ -781,7 +783,11 @@ class TestExecuteClaude:
             with caplog.at_level("WARNING"):
                 await claude_service._execute_claude("Test prompt")
 
-                assert any("Claude 错误:" in record.message for record in caplog.records if record.levelname == "WARNING")
+                assert any(
+                    "Claude 错误:" in record.message
+                    for record in caplog.records
+                    if record.levelname == "WARNING"
+                )
 
 
 # =============================================================================
@@ -885,8 +891,12 @@ class TestConnection:
             with caplog.at_level("ERROR"):
                 await claude_service.test_connection()
 
-                assert any("Claude CLI 不可用" in record.message or "Claude CLI 连接测试失败" in record.message
-                          for record in caplog.records if record.levelname == "ERROR")
+                assert any(
+                    "Claude CLI 不可用" in record.message
+                    or "Claude CLI 连接测试失败" in record.message
+                    for record in caplog.records
+                    if record.levelname == "ERROR"
+                )
 
 
 # =============================================================================
@@ -1260,7 +1270,7 @@ class TestClaudeServiceEdgeCases:
             # 验证命令构造
             call_args = mock_subprocess.call_args
             args = call_args[0]  # 所有位置参数
-            
+
             # args[0] 应该是第一个参数（命令路径），而不是字符
             assert args[0] == claude_service.claude_cli_path
             assert "--cwd" in args
@@ -1331,7 +1341,12 @@ class TestClaudeServiceEdgeCases:
             mock_execute.side_effect = [
                 asyncio.TimeoutError(),  # 第1次超时
                 Exception("Network error"),  # 第2次异常
-                {"success": False, "errors": "API error", "returncode": 1, "output": ""},  # 第3次失败
+                {
+                    "success": False,
+                    "errors": "API error",
+                    "returncode": 1,
+                    "output": "",
+                },  # 第3次失败
             ]
 
             with patch("asyncio.sleep"):

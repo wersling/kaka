@@ -138,9 +138,9 @@ def setup_logging() -> logging.Logger:
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             handlers=[
                 logging.FileHandler("logs/ai-scheduler.log", encoding="utf-8"),
-                logging.StreamHandler()
+                logging.StreamHandler(),
             ],
-            force=True  # 强制重新配置
+            force=True,  # 强制重新配置
         )
 
         logger = logging.getLogger(__name__)
@@ -166,14 +166,14 @@ def parse_pydantic_error(error: Exception) -> list[str]:
         try:
             # 尝试从错误字符串中提取字段名和错误消息
             # Pydantic 错误格式：Field_name\n  Error message
-            lines = error_str.split('\n')
+            lines = error_str.split("\n")
             i = 0
             while i < len(lines):
                 line = lines[i].strip()
 
                 # 查找字段行（例如：github.token）
-                if '.' in line and not line.startswith('For further'):
-                    field_parts = line.split('.')
+                if "." in line and not line.startswith("For further"):
+                    field_parts = line.split(".")
                     field_name = field_parts[-1] if field_parts else line
 
                     # 查找错误消息（通常在下一行或几行之后）
@@ -182,15 +182,19 @@ def parse_pydantic_error(error: Exception) -> list[str]:
                     while i < len(lines):
                         next_line = lines[i].strip()
                         # 跳过空行和元数据行
-                        if not next_line or next_line.startswith('[type=') or next_line.startswith('For further'):
+                        if (
+                            not next_line
+                            or next_line.startswith("[type=")
+                            or next_line.startswith("For further")
+                        ):
                             i += 1
                             continue
                         # 找到错误消息
-                        if 'Value error' in next_line:
+                        if "Value error" in next_line:
                             # 提取实际的错误消息（去掉 "Value error, " 前缀）
-                            error_msg = next_line.split('Value error,')[-1].strip()
+                            error_msg = next_line.split("Value error,")[-1].strip()
                             # 去除末尾的 Pydantic 元数据（例如：[type=value_error, ...]）
-                            error_msg = error_msg.split(' [type=')[0].strip()
+                            error_msg = error_msg.split(" [type=")[0].strip()
                             error_messages.append(error_msg)
                             i += 1
                             break
@@ -223,20 +227,22 @@ def check_config_validity(config: Config) -> list[str]:
     errors = []
 
     # 检查 GitHub Token
-    if not config.github.token or config.github.token.startswith('${'):
+    if not config.github.token or config.github.token.startswith("${"):
         errors.append("❌ GitHub Token 未配置或无效")
-    elif not (config.github.token.startswith('ghp_') or config.github.token.startswith('github_pat_')):
+    elif not (
+        config.github.token.startswith("ghp_") or config.github.token.startswith("github_pat_")
+    ):
         errors.append("❌ GitHub Token 格式无效（应以 ghp_ 或 github_pat_ 开头）")
 
     # 检查仓库信息
-    if not config.github.repo_owner or config.github.repo_owner.startswith('${'):
+    if not config.github.repo_owner or config.github.repo_owner.startswith("${"):
         errors.append("❌ GitHub 仓库所有者未配置")
 
-    if not config.github.repo_name or config.github.repo_name.startswith('${'):
+    if not config.github.repo_name or config.github.repo_name.startswith("${"):
         errors.append("❌ GitHub 仓库名称未配置")
 
     # 检查本地仓库路径
-    if not config.repository.path or str(config.repository.path).startswith('${'):
+    if not config.repository.path or str(config.repository.path).startswith("${"):
         errors.append("❌ 本地仓库路径未配置")
     else:
         repo_path = config.repository.path
@@ -246,7 +252,7 @@ def check_config_validity(config: Config) -> list[str]:
             errors.append(f"❌ 本地路径不是有效的 Git 仓库: {repo_path}")
 
     # 检查 Webhook Secret
-    if not config.github.webhook_secret or config.github.webhook_secret.startswith('${'):
+    if not config.github.webhook_secret or config.github.webhook_secret.startswith("${"):
         errors.append("❌ GitHub Webhook Secret 未配置")
 
     return errors
@@ -266,8 +272,8 @@ def print_config_guide(errors: list[str]) -> None:
 
     for error in errors:
         # 如果错误包含换行符，按行打印，保持缩进
-        if '\n' in error:
-            lines = error.split('\n')
+        if "\n" in error:
+            lines = error.split("\n")
             # 打印第一行（错误标题）
             print(f"  {lines[0]}")
             # 打印后续行（详细信息），保持原有缩进
@@ -333,10 +339,7 @@ async def lifespan(app: FastAPI):
     if not env_file.exists():
         # 标记应用需要配置
         app.state.needs_configuration = True
-        config_errors = [
-            "📄 未找到 .env 配置文件",
-            "   需要运行 'kaka configure' 创建配置文件"
-        ]
+        config_errors = ["📄 未找到 .env 配置文件", "   需要运行 'kaka configure' 创建配置文件"]
         logger.warning("未找到配置文件，应用需要配置")
     else:
         try:
@@ -351,7 +354,7 @@ async def lifespan(app: FastAPI):
             if "配置文件不存在" in error_msg or "FileNotFoundError" in error_msg:
                 config_errors = [
                     "📄 未找到 config/config.yaml 配置文件",
-                    f"   需要运行 'kaka configure' 创建配置文件"
+                    f"   需要运行 'kaka configure' 创建配置文件",
                 ]
             else:
                 # 使用 parse_pydantic_error 解析验证错误
@@ -375,6 +378,7 @@ async def lifespan(app: FastAPI):
         sys.stderr.flush()
         # 直接退出程序，不启动服务
         import os
+
         os._exit(0)
 
     # 配置有效，继续正常启动流程
@@ -389,6 +393,7 @@ async def lifespan(app: FastAPI):
 
     # 初始化数据库
     from app.db.database import init_db
+
     try:
         init_db()
         logger.info("✅ 数据库初始化完成")
@@ -398,6 +403,7 @@ async def lifespan(app: FastAPI):
 
     # 初始化并发管理器
     from app.utils.concurrency import ConcurrencyManager
+
     try:
         ConcurrencyManager.initialize(config.task.max_concurrent)
         logger.info(f"✅ 并发管理器初始化完成 (最大并发: {config.task.max_concurrent})")
@@ -451,6 +457,7 @@ def get_cors_origins() -> list[str]:
     """获取 CORS 允许的来源列表"""
     try:
         from app.config import get_config
+
         config = get_config()
         return config.security.cors_origins
     except (AttributeError, ImportError, RuntimeError):
@@ -479,6 +486,7 @@ from app.api.tasks import router as tasks_router
 from app.api.dashboard import router as dashboard_router
 from app.api.logs import router as logs_router
 from app.api.config import router as config_router
+
 app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
 app.include_router(dashboard_router, tags=["Dashboard"])
 app.include_router(logs_router, prefix="/api", tags=["Logs"])
@@ -508,10 +516,10 @@ async def root(request: Request) -> Response:
                 "message": "应用需要配置才能正常运行",
                 "setup_command": "kaka configure",
                 "documentation": "配置脚本将引导您完成以下步骤：\n"
-                                "1. 验证 GitHub Token（实际 API 调用验证）\n"
-                                "2. 配置 GitHub 仓库信息\n"
-                                "3. 设置本地仓库路径\n"
-                                "4. 生成 Webhook Secret",
+                "1. 验证 GitHub Token（实际 API 调用验证）\n"
+                "2. 配置 GitHub 仓库信息\n"
+                "3. 设置本地仓库路径\n"
+                "4. 生成 Webhook Secret",
             },
         )
 
@@ -567,11 +575,11 @@ async def github_webhook(
 
         # 详细日志记录签名验证过程（不泄露敏感信息）
         if x_hub_signature_256:
-            sig_format = x_hub_signature_256.split('=')[0] if '=' in x_hub_signature_256 else 'unknown'
-            sig_length = len(x_hub_signature_256.split('=')[1]) if '=' in x_hub_signature_256 else 0
-            logger.debug(
-                f"Webhook 签名验证: format={sig_format}, length={sig_length}"
+            sig_format = (
+                x_hub_signature_256.split("=")[0] if "=" in x_hub_signature_256 else "unknown"
             )
+            sig_length = len(x_hub_signature_256.split("=")[1]) if "=" in x_hub_signature_256 else 0
+            logger.debug(f"Webhook 签名验证: format={sig_format}, length={sig_length}")
         else:
             logger.warning("Webhook 签名缺失：未提供 X-Hub-Signature-256 头")
 
@@ -596,10 +604,7 @@ async def github_webhook(
         # 获取事件类型
         event_type = x_github_event or event_data.get("action", "unknown")
 
-        logger.info(
-            f"收到 Webhook: delivery={x_github_delivery}, "
-            f"event={event_type}"
-        )
+        logger.info(f"收到 Webhook: delivery={x_github_delivery}, " f"event={event_type}")
 
         # 处理事件（异步，不阻塞响应）
         from app.services.webhook_handler import WebhookHandler
@@ -614,8 +619,7 @@ async def github_webhook(
                 result = await handler.handle_event(event_type, event_data)
                 if result:
                     logger.info(
-                        f"事件处理完成: task_id={result.task_id}, "
-                        f"success={result.success}"
+                        f"事件处理完成: task_id={result.task_id}, " f"success={result.success}"
                     )
             except Exception as e:
                 logger.error(f"事件处理异常: {e}", exc_info=True)
@@ -625,12 +629,14 @@ async def github_webhook(
 
         # 立即返回响应 (202 Accepted)
         return Response(
-            content=json.dumps({
-                "status": "accepted",
-                "message": "Webhook 已接收，正在后台处理",
-                "delivery_id": x_github_delivery,
-                "event_type": event_type,
-            }),
+            content=json.dumps(
+                {
+                    "status": "accepted",
+                    "message": "Webhook 已接收，正在后台处理",
+                    "delivery_id": x_github_delivery,
+                    "event_type": event_type,
+                }
+            ),
             status_code=status.HTTP_202_ACCEPTED,
             media_type="application/json",
         )

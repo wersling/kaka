@@ -109,9 +109,7 @@ def sample_log_data():
 class TestVerifyWebhookSignature:
     """测试 GitHub Webhook HMAC-SHA256 签名验证"""
 
-    def test_valid_signature_verification(
-        self, sample_payload, sample_signature, webhook_secret
-    ):
+    def test_valid_signature_verification(self, sample_payload, sample_signature, webhook_secret):
         """
         测试：正确的签名应该通过验证
 
@@ -125,9 +123,7 @@ class TestVerifyWebhookSignature:
         )
         assert result is True
 
-    def test_invalid_signature_rejection(
-        self, sample_payload, webhook_secret
-    ):
+    def test_invalid_signature_rejection(self, sample_payload, webhook_secret):
         """
         测试：错误的签名应该被拒绝
 
@@ -142,9 +138,7 @@ class TestVerifyWebhookSignature:
         )
         assert result is False
 
-    def test_missing_secret_raises_exception(
-        self, sample_payload, sample_signature
-    ):
+    def test_missing_secret_raises_exception(self, sample_payload, sample_signature):
         """
         测试：缺失密钥时应该抛出 ValueError 异常
 
@@ -175,9 +169,7 @@ class TestVerifyWebhookSignature:
         )
         assert result is False
 
-    def test_missing_signature_header_returns_false(
-        self, sample_payload, webhook_secret
-    ):
+    def test_missing_signature_header_returns_false(self, sample_payload, webhook_secret):
         """
         测试：缺失签名头部时应该返回 False
 
@@ -223,9 +215,7 @@ class TestVerifyWebhookSignature:
             )
             assert result is True
 
-    def test_timing_attack_protection(
-        self, sample_payload, sample_signature, webhook_secret
-    ):
+    def test_timing_attack_protection(self, sample_payload, sample_signature, webhook_secret):
         """
         测试：应该使用恒定时间比较防止时序攻击
 
@@ -248,9 +238,7 @@ class TestVerifyWebhookSignature:
     # 安全场景测试
     # =========================================================================
 
-    def test_tampered_signature_rejection(
-        self, sample_payload, webhook_secret
-    ):
+    def test_tampered_signature_rejection(self, sample_payload, webhook_secret):
         """
         测试：篡改后的签名应该被拒绝
 
@@ -258,9 +246,7 @@ class TestVerifyWebhookSignature:
         期望：返回 False
         """
         # 计算 payload 的签名
-        original_signature = _calculate_signature(
-            sample_payload, webhook_secret
-        )
+        original_signature = _calculate_signature(sample_payload, webhook_secret)
 
         # 修改 payload
         tampered_payload = b'{"action": "unlabeled", "issue": {"id": 999}}'
@@ -300,9 +286,7 @@ class TestVerifyWebhookSignature:
         )
         assert result is False
 
-    def test_empty_string_signature_rejected(
-        self, sample_payload, webhook_secret
-    ):
+    def test_empty_string_signature_rejected(self, sample_payload, webhook_secret):
         """
         测试：空字符串签名应该被拒绝
 
@@ -316,9 +300,7 @@ class TestVerifyWebhookSignature:
         )
         assert result is False
 
-    def test_wrong_signature_algorithm_rejected(
-        self, sample_payload, webhook_secret
-    ):
+    def test_wrong_signature_algorithm_rejected(self, sample_payload, webhook_secret):
         """
         测试：错误的签名算法应该被拒绝
 
@@ -334,9 +316,7 @@ class TestVerifyWebhookSignature:
         )
         assert result is False
 
-    def test_none_signature_rejected(
-        self, sample_payload, webhook_secret
-    ):
+    def test_none_signature_rejected(self, sample_payload, webhook_secret):
         """
         测试：None 签名应该被拒绝
 
@@ -350,9 +330,7 @@ class TestVerifyWebhookSignature:
         )
         assert result is False
 
-    def test_signature_with_extra_whitespace_rejected(
-        self, sample_payload, webhook_secret
-    ):
+    def test_signature_with_extra_whitespace_rejected(self, sample_payload, webhook_secret):
         """
         测试：包含额外空格的签名应该被拒绝
 
@@ -497,9 +475,7 @@ class TestVerifyWebhookSignature:
     # 性能测试
     # =========================================================================
 
-    def test_signature_verification_performance(
-        self, sample_payload, webhook_secret
-    ):
+    def test_signature_verification_performance(self, sample_payload, webhook_secret):
         """
         测试：签名验证性能基准
 
@@ -531,9 +507,7 @@ class TestVerifyWebhookSignature:
         avg_time_ms = (end_time - start_time) / iterations * 1000
 
         # 验证平均时间 < 1ms
-        assert (
-            avg_time_ms < 1.0
-        ), f"平均签名验证时间 {avg_time_ms:.3f}ms 超过 1ms 阈值"
+        assert avg_time_ms < 1.0, f"平均签名验证时间 {avg_time_ms:.3f}ms 超过 1ms 阈值"
 
     def test_batch_verification_performance(self, webhook_secret):
         """
@@ -561,9 +535,7 @@ class TestVerifyWebhookSignature:
         total_time_ms = (end_time - start_time) * 1000
 
         # 验证总时间 < 100ms
-        assert (
-            total_time_ms < 100.0
-        ), f"批量验证总时间 {total_time_ms:.2f}ms 超过 100ms 阈值"
+        assert total_time_ms < 100.0, f"批量验证总时间 {total_time_ms:.2f}ms 超过 100ms 阈值"
 
     # =========================================================================
     # 编码测试

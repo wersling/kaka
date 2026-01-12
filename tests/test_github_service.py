@@ -250,9 +250,7 @@ class TestGetRepo:
         repo = github_service._get_repo()
 
         assert repo == mock_repo
-        github_service._github_mock.get_repo.assert_called_once_with(
-            "testowner/testrepo"
-        )
+        github_service._github_mock.get_repo.assert_called_once_with("testowner/testrepo")
 
     def test_get_repo_uses_config(self, github_service, mock_repo):
         """
@@ -376,9 +374,7 @@ class TestCreatePullRequest:
         assert "## 原 Issue：Test Issue" in pr_body
         assert "Original issue description" in pr_body
 
-    def test_create_pr_includes_execution_time(
-        self, github_service, mock_repo, mock_pull_request
-    ):
+    def test_create_pr_includes_execution_time(self, github_service, mock_repo, mock_pull_request):
         """
         测试 PR body 包含执行时间
 
@@ -410,9 +406,7 @@ class TestCreatePullRequest:
         assert "**用时**: 45.7秒" in pr_body
         assert "#123" in pr_body
 
-    def test_create_pr_default_base_branch(
-        self, github_service, mock_repo, mock_pull_request
-    ):
+    def test_create_pr_default_base_branch(self, github_service, mock_repo, mock_pull_request):
         """
         测试使用默认 base 分支
 
@@ -439,9 +433,7 @@ class TestCreatePullRequest:
         call_args = mock_repo.create_pull.call_args
         assert call_args.kwargs["base"] == "main"
 
-    def test_create_pr_custom_base_branch(
-        self, github_service, mock_repo, mock_pull_request
-    ):
+    def test_create_pr_custom_base_branch(self, github_service, mock_repo, mock_pull_request):
         """
         测试使用自定义 base 分支
 
@@ -485,9 +477,7 @@ class TestCreatePullRequest:
         mock_comparison.commits = [mock_commit]
         mock_repo.compare.return_value = mock_comparison
 
-        mock_repo.create_pull.side_effect = GithubException(
-            422, {"message": "Validation failed"}
-        )
+        mock_repo.create_pull.side_effect = GithubException(422, {"message": "Validation failed"})
 
         with pytest.raises(GithubException):
             github_service.create_pull_request(
@@ -643,9 +633,7 @@ class TestAddCommentToIssue:
         github_service._github_mock.get_repo.return_value = mock_repo
         mock_repo.get_issue.return_value = mock_issue
 
-        github_service.add_comment_to_issue(
-            issue_number=123, comment="Test comment"
-        )
+        github_service.add_comment_to_issue(issue_number=123, comment="Test comment")
 
         mock_repo.get_issue.assert_called_once_with(123)
         mock_issue.create_comment.assert_called_once_with("Test comment")
@@ -659,13 +647,9 @@ class TestAddCommentToIssue:
         - 返回 False（不抛出异常）
         """
         github_service._github_mock.get_repo.return_value = mock_repo
-        mock_repo.get_issue.side_effect = GithubException(
-            404, {"message": "Issue not found"}
-        )
+        mock_repo.get_issue.side_effect = GithubException(404, {"message": "Issue not found"})
 
-        result = github_service.add_comment_to_issue(
-            issue_number=999, comment="Test"
-        )
+        result = github_service.add_comment_to_issue(issue_number=999, comment="Test")
 
         # add_comment_to_issue 捕获所有异常并返回 False
         assert result is False
@@ -705,9 +689,7 @@ class TestAddCommentToPr:
         - 异常被重新抛出
         """
         github_service._github_mock.get_repo.return_value = mock_repo
-        mock_repo.get_pull.side_effect = GithubException(
-            404, {"message": "PR not found"}
-        )
+        mock_repo.get_pull.side_effect = GithubException(404, {"message": "PR not found"})
 
         with pytest.raises(GithubException):
             github_service.add_comment_to_pr(pr_number=999, comment="Test")
@@ -733,9 +715,7 @@ class TestUpdateIssueLabels:
         github_service._github_mock.get_repo.return_value = mock_repo
         mock_repo.get_issue.return_value = mock_issue
 
-        github_service.update_issue_labels(
-            issue_number=123, labels=["bug", "high-priority"]
-        )
+        github_service.update_issue_labels(issue_number=123, labels=["bug", "high-priority"])
 
         mock_repo.get_issue.assert_called_once_with(123)
         mock_issue.set_labels.assert_called_once_with("bug", "high-priority")
@@ -765,14 +745,10 @@ class TestUpdateIssueLabels:
         - 异常被重新抛出
         """
         github_service._github_mock.get_repo.return_value = mock_repo
-        mock_repo.get_issue.side_effect = GithubException(
-            404, {"message": "Issue not found"}
-        )
+        mock_repo.get_issue.side_effect = GithubException(404, {"message": "Issue not found"})
 
         with pytest.raises(GithubException):
-            github_service.update_issue_labels(
-                issue_number=999, labels=["test"]
-            )
+            github_service.update_issue_labels(issue_number=999, labels=["test"])
 
 
 # =============================================================================
@@ -795,9 +771,7 @@ class TestCloseIssue:
         github_service._github_mock.get_repo.return_value = mock_repo
         mock_repo.get_issue.return_value = mock_issue
 
-        github_service.close_issue(
-            issue_number=123, comment="Completed this task"
-        )
+        github_service.close_issue(issue_number=123, comment="Completed this task")
 
         mock_repo.get_issue.assert_called_once_with(number=123)
         mock_issue.create_comment.assert_called_once_with("Completed this task")
@@ -829,9 +803,7 @@ class TestCloseIssue:
         - 异常被重新抛出
         """
         github_service._github_mock.get_repo.return_value = mock_repo
-        mock_repo.get_issue.side_effect = GithubException(
-            404, {"message": "Issue not found"}
-        )
+        mock_repo.get_issue.side_effect = GithubException(404, {"message": "Issue not found"})
 
         with pytest.raises(GithubException):
             github_service.close_issue(issue_number=999)
@@ -895,9 +867,7 @@ class TestGetPullRequest:
 class TestGetRateLimit:
     """测试 get_rate_limit() 方法"""
 
-    def test_get_rate_limit_success(
-        self, github_service, mock_github, mock_rate_limit
-    ):
+    def test_get_rate_limit_success(self, github_service, mock_github, mock_rate_limit):
         """
         测试成功获取限额信息
 
@@ -993,8 +963,10 @@ class TestCheckRateLimit:
 
         # 修复：使用 patch.object 来 mock time.sleep 和 time.time
         # time 模块在 _check_rate_limit 方法内部导入
-        with patch.object(time, "sleep", return_value=None) as mock_sleep, \
-             patch.object(time, "time", return_value=1736320800):  # 2025-01-08 12:00:00
+        with (
+            patch.object(time, "sleep", return_value=None) as mock_sleep,
+            patch.object(time, "time", return_value=1736320800),
+        ):  # 2025-01-08 12:00:00
             result = github_service._check_rate_limit(min_remaining=100)
 
             # 应该调用 sleep（因为 remaining=5 < min_remaining=100，且 wait_time > 0）
@@ -1019,9 +991,7 @@ class TestCheckRateLimit:
         github_service.github.get_rate_limit.return_value = mock_rate_limit
         assert github_service._check_rate_limit() is False
 
-    def test_check_rate_limit_exception_returns_true(
-        self, github_service, mock_github
-    ):
+    def test_check_rate_limit_exception_returns_true(self, github_service, mock_github):
         """
         测试异常时返回 True（继续执行）
 
@@ -1058,9 +1028,7 @@ class TestCheckRateLimit:
 class TestGetPullsForBranch:
     """测试 get_pulls_for_branch() 方法"""
 
-    def test_get_pulls_for_branch_success(
-        self, github_service, mock_repo, mock_pull_request
-    ):
+    def test_get_pulls_for_branch_success(self, github_service, mock_repo, mock_pull_request):
         """
         测试成功获取分支的 PR
 
@@ -1084,9 +1052,7 @@ class TestGetPullsForBranch:
         assert pulls[0]["state"] == "open"
         assert pulls[0]["title"] == "Kaka: Test Issue"
 
-        mock_repo.get_pulls.assert_called_once_with(
-            state="all", head="testowner:feature/test"
-        )
+        mock_repo.get_pulls.assert_called_once_with(state="all", head="testowner:feature/test")
 
     def test_get_pulls_for_branch_empty(self, github_service, mock_repo):
         """
@@ -1172,9 +1138,7 @@ class TestGetPullsForBranch:
 class TestCreatePullRequestEdgeCases:
     """测试 create_pull_request() 边界情况"""
 
-    def test_create_pr_no_commits_between_branches(
-        self, github_service, mock_repo
-    ):
+    def test_create_pr_no_commits_between_branches(self, github_service, mock_repo):
         """
         测试分支之间没有提交差异
 
@@ -1199,9 +1163,7 @@ class TestCreatePullRequestEdgeCases:
                 issue_body="Body",
             )
 
-    def test_create_pr_no_commits_github_api_error(
-        self, github_service, mock_repo
-    ):
+    def test_create_pr_no_commits_github_api_error(self, github_service, mock_repo):
         """
         测试 GitHub API 返回 "No commits" 错误
 
@@ -1231,9 +1193,7 @@ class TestCreatePullRequestEdgeCases:
 
         assert result is None
 
-    def test_create_pr_with_development_summary(
-        self, github_service, mock_repo, mock_pull_request
-    ):
+    def test_create_pr_with_development_summary(self, github_service, mock_repo, mock_pull_request):
         """
         测试创建 PR 并包含 AI 开发总结
 
@@ -1291,9 +1251,7 @@ class TestAddCommentToIssueEdgeCases:
         error = GithubException(403, {"message": "Resource not accessible by integration"})
         mock_repo.get_issue.side_effect = error
 
-        result = github_service.add_comment_to_issue(
-            issue_number=123, comment="Test comment"
-        )
+        result = github_service.add_comment_to_issue(issue_number=123, comment="Test comment")
 
         assert result is False
 
@@ -1312,9 +1270,7 @@ class TestAddCommentToIssueEdgeCases:
         error = GithubException(404, {"message": "Issue not found"})
         mock_repo.get_issue.side_effect = error
 
-        result = github_service.add_comment_to_issue(
-            issue_number=999, comment="Test comment"
-        )
+        result = github_service.add_comment_to_issue(issue_number=999, comment="Test comment")
 
         assert result is False
 
@@ -1406,9 +1362,7 @@ class TestGitHubServiceIntegration:
         github_service.add_comment_to_pr(pr_number=456, comment="Review me")
 
         # 更新 Issue 标签
-        github_service.update_issue_labels(
-            issue_number=123, labels=["in-progress", "ai-dev"]
-        )
+        github_service.update_issue_labels(issue_number=123, labels=["in-progress", "ai-dev"])
 
         # 关闭 Issue
         github_service.close_issue(issue_number=123, comment="Completed")

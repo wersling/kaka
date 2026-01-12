@@ -18,11 +18,14 @@
 
 ## 🚀 快速开始
 
-### 方式 1：一键安装（推荐）
+### 方式 1：pip 安装（推荐）
 
 ```bash
-# 运行安装脚本
-bash scripts/install.sh
+# 直接安装
+pip install kaka-auto
+
+# 或带开发依赖
+pip install kaka-auto[dev]
 
 # 配置服务
 kaka configure
@@ -31,23 +34,32 @@ kaka configure
 kaka start
 ```
 
-### 方式 2：源码运行
+### 方式 2：从源码安装（开发模式）
 
 ```bash
 # 克隆项目
 git clone https://github.com/wersling/kaka.git
 cd kaka
 
+# 运行初始化脚本（自动创建 venv、安装依赖、配置环境）
+./dev_setup.sh
+
+# 启动服务
+kaka start
+```
+
+**或手动安装**：
+
+```bash
 # 创建虚拟环境
 python3 -m venv venv
 source venv/bin/activate
 
-# 安装依赖
+# 安装
 pip install -e .
 
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env 文件填入配置
+# 配置环境
+kaka configure
 
 # 启动服务
 kaka start
@@ -71,13 +83,10 @@ kaka start
 
 ## 📚 文档
 
-- [快速启动指南](QUICKSTART.md) - 5 分钟上手教程
-- [API 文档](API.md) - 完整 API 参考
-- [配置说明](docs/CONFIGURATION.md) - 详细配置指南
+- [快速启动指南](docs/s/QUICKSTART.md) - 5 分钟上手教程
+- [API 文档](docs/API.md) - 完整 API 参考
 - [使用指南](docs/USAGE.md) - 使用说明和示例
 - [开发指南](docs/DEVELOPMENT.md) - 开发者文档
-- [部署指南](docs/DEPLOYMENT.md) - 生产环境部署
-- [故障排查](docs/TROUBLESHOOTING.md) - 常见问题解决
 
 
 ## 📝 许可证

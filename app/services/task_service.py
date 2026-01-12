@@ -247,7 +247,12 @@ class TaskService:
         Returns:
             List[Task]: 任务列表
         """
-        return self.db.query(Task).filter(Task.issue_number == issue_number).order_by(desc(Task.created_at)).all()
+        return (
+            self.db.query(Task)
+            .filter(Task.issue_number == issue_number)
+            .order_by(desc(Task.created_at))
+            .all()
+        )
 
     def get_all_tasks(
         self,
@@ -284,7 +289,13 @@ class TaskService:
         Returns:
             List[TaskLog]: 日志列表
         """
-        return self.db.query(TaskLog).filter(TaskLog.task_id == task_id).order_by(desc(TaskLog.timestamp)).limit(limit).all()
+        return (
+            self.db.query(TaskLog)
+            .filter(TaskLog.task_id == task_id)
+            .order_by(desc(TaskLog.timestamp))
+            .limit(limit)
+            .all()
+        )
 
     def get_task_stats(self) -> Dict[str, int]:
         """

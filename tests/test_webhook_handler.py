@@ -194,9 +194,15 @@ class TestWebhookHandlerInitialization:
                     with caplog.at_level("INFO"):
                         webhook_handler._init_services()
 
-                        assert any("Git 服务已初始化" in record.message for record in caplog.records)
-                        assert any("Claude 服务已初始化" in record.message for record in caplog.records)
-                        assert any("GitHub 服务已初始化" in record.message for record in caplog.records)
+                        assert any(
+                            "Git 服务已初始化" in record.message for record in caplog.records
+                        )
+                        assert any(
+                            "Claude 服务已初始化" in record.message for record in caplog.records
+                        )
+                        assert any(
+                            "GitHub 服务已初始化" in record.message for record in caplog.records
+                        )
 
     def test_init_services_only_initializes_once(self, webhook_handler):
         """
@@ -297,7 +303,9 @@ class TestHandleEvent:
             with patch.object(webhook_handler, "_handle_issue_event", new_callable=AsyncMock):
                 await webhook_handler.handle_event("issues", {})
 
-                assert any("收到 Webhook 事件: issues" in record.message for record in caplog.records)
+                assert any(
+                    "收到 Webhook 事件: issues" in record.message for record in caplog.records
+                )
 
     async def test_handle_event_logs_sanitized_data(self, webhook_handler, caplog):
         """
@@ -342,7 +350,9 @@ class TestHandleEvent:
 class TestHandleIssueEvent:
     """测试 _handle_issue_event 方法"""
 
-    async def test_labeled_action_with_trigger_label(self, webhook_handler, issue_event_data, mock_config):
+    async def test_labeled_action_with_trigger_label(
+        self, webhook_handler, issue_event_data, mock_config
+    ):
         """
         测试：labeled 动作且包含触发标签应该触发 AI 开发
 
@@ -361,7 +371,9 @@ class TestHandleIssueEvent:
                 mock_trigger.assert_called_once()
                 assert result == expected_result
 
-    async def test_labeled_action_without_trigger_label(self, webhook_handler, mock_config, github_user):
+    async def test_labeled_action_without_trigger_label(
+        self, webhook_handler, mock_config, github_user
+    ):
         """
         测试：labeled 动作但不包含触发标签不应该触发
 
@@ -422,7 +434,9 @@ class TestHandleIssueEvent:
 
             assert result is None
 
-    async def test_successful_ai_development_trigger(self, webhook_handler, issue_event_data, mock_config):
+    async def test_successful_ai_development_trigger(
+        self, webhook_handler, issue_event_data, mock_config
+    ):
         """
         测试：成功触发 AI 开发流程
 
@@ -462,7 +476,9 @@ class TestHandleIssueEvent:
         assert result.task_id == "error"
         assert result.error_message is not None
 
-    async def test_handle_issue_event_logs_issue_info(self, webhook_handler, issue_event_data, mock_config, caplog):
+    async def test_handle_issue_event_logs_issue_info(
+        self, webhook_handler, issue_event_data, mock_config, caplog
+    ):
         """
         测试：_handle_issue_event 应该记录 Issue 信息
 
@@ -478,7 +494,9 @@ class TestHandleIssueEvent:
                     assert any("action=labeled" in record.message for record in caplog.records)
                     assert any("issue=#123" in record.message for record in caplog.records)
 
-    async def test_handle_issue_event_logs_no_trigger(self, webhook_handler, issue_event_data, mock_config, caplog):
+    async def test_handle_issue_event_logs_no_trigger(
+        self, webhook_handler, issue_event_data, mock_config, caplog
+    ):
         """
         测试：不满足触发条件时应该记录调试日志
 
@@ -502,7 +520,9 @@ class TestHandleIssueEvent:
 class TestHandleCommentEvent:
     """测试 _handle_comment_event 方法"""
 
-    async def test_created_action_with_trigger_command(self, webhook_handler, issue_comment_event_data, mock_config):
+    async def test_created_action_with_trigger_command(
+        self, webhook_handler, issue_comment_event_data, mock_config
+    ):
         """
         测试：created 动作且包含触发命令应该触发 AI 开发
 
@@ -521,7 +541,9 @@ class TestHandleCommentEvent:
                 mock_trigger.assert_called_once()
                 assert result == expected_result
 
-    async def test_created_action_without_trigger_command(self, webhook_handler, issue_comment_event_data, mock_config):
+    async def test_created_action_without_trigger_command(
+        self, webhook_handler, issue_comment_event_data, mock_config
+    ):
         """
         测试：created 动作但不包含触发命令不应该触发
 
@@ -563,7 +585,9 @@ class TestHandleCommentEvent:
 
             assert result is None
 
-    async def test_successful_ai_development_from_comment(self, webhook_handler, issue_comment_event_data, mock_config):
+    async def test_successful_ai_development_from_comment(
+        self, webhook_handler, issue_comment_event_data, mock_config
+    ):
         """
         测试：从评论成功触发 AI 开发流程
 
@@ -601,7 +625,9 @@ class TestHandleCommentEvent:
         assert result.task_id == "error"
         assert result.error_message is not None
 
-    async def test_handle_comment_event_logs_comment_info(self, webhook_handler, issue_comment_event_data, mock_config, caplog):
+    async def test_handle_comment_event_logs_comment_info(
+        self, webhook_handler, issue_comment_event_data, mock_config, caplog
+    ):
         """
         测试：_handle_comment_event 应该记录评论信息
 
@@ -617,7 +643,9 @@ class TestHandleCommentEvent:
                     assert any("action=created" in record.message for record in caplog.records)
                     assert any("issue=#123" in record.message for record in caplog.records)
 
-    async def test_handle_comment_event_logs_no_trigger(self, webhook_handler, issue_comment_event_data, mock_config, caplog):
+    async def test_handle_comment_event_logs_no_trigger(
+        self, webhook_handler, issue_comment_event_data, mock_config, caplog
+    ):
         """
         测试：不满足触发条件时应该记录调试日志
 
@@ -632,7 +660,9 @@ class TestHandleCommentEvent:
 
                 assert any("不包含触发命令" in record.message for record in caplog.records)
 
-    async def test_handle_comment_event_ignores_non_created(self, webhook_handler, issue_comment_event_data, mock_config, caplog):
+    async def test_handle_comment_event_ignores_non_created(
+        self, webhook_handler, issue_comment_event_data, mock_config, caplog
+    ):
         """
         测试：非 created 动作应该记录忽略日志
 
@@ -645,7 +675,9 @@ class TestHandleCommentEvent:
             with caplog.at_level("DEBUG"):
                 await webhook_handler._handle_comment_event(issue_comment_event_data)
 
-                assert any("Ignore comment action: edited" in record.message for record in caplog.records)
+                assert any(
+                    "Ignore comment action: edited" in record.message for record in caplog.records
+                )
 
 
 # =============================================================================
@@ -1850,9 +1882,7 @@ class TestParametrizedTriggers:
             ("fork", {}, False),
         ],
     )
-    async def test_event_routing(
-        self, webhook_handler, event_type, data, should_route
-    ):
+    async def test_event_routing(self, webhook_handler, event_type, data, should_route):
         """
         参数化测试：不同事件类型的路由行为
 
@@ -1893,7 +1923,9 @@ class TestParametrizedTriggers:
             ("deleted", False),
         ],
     )
-    async def test_action_filters(self, webhook_handler, mock_config, github_user, action, should_trigger):
+    async def test_action_filters(
+        self, webhook_handler, mock_config, github_user, action, should_trigger
+    ):
         """
         参数化测试：不同动作的过滤行为
 

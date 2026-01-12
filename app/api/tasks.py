@@ -209,16 +209,12 @@ async def cancel_task(
         task = task_service.get_task_by_id(task_id)
 
         if not task:
-            raise HTTPException(
-                status_code=404,
-                detail=f"任务不存在: {task_id}"
-            )
+            raise HTTPException(status_code=404, detail=f"任务不存在: {task_id}")
 
         # 只能取消 pending 或 running 状态的任务
         if task.status not in [TaskStatus.PENDING, TaskStatus.RUNNING]:
             raise HTTPException(
-                status_code=400,
-                detail=f"任务无法取消: {task_id} (当前状态: {task.status.value})"
+                status_code=400, detail=f"任务无法取消: {task_id} (当前状态: {task.status.value})"
             )
 
         process_terminated = False
@@ -278,33 +274,26 @@ async def retry_task(
         task = task_service.get_task_by_id(task_id)
 
         if not task:
-            raise HTTPException(
-                status_code=404,
-                detail=f"任务不存在: {task_id}"
-            )
+            raise HTTPException(status_code=404, detail=f"任务不存在: {task_id}")
 
         # 只能重试失败或取消的任务
         if task.status not in [TaskStatus.FAILED, TaskStatus.CANCELLED]:
             raise HTTPException(
-                status_code=400,
-                detail=f"任务无法重试: {task_id} (当前状态: {task.status.value})"
+                status_code=400, detail=f"任务无法重试: {task_id} (当前状态: {task.status.value})"
             )
 
         # 检查重试次数
         if task.retry_count >= task.max_retries:
             raise HTTPException(
                 status_code=400,
-                detail=f"任务已达到最大重试次数: {task_id} (已重试 {task.retry_count} 次)"
+                detail=f"任务已达到最大重试次数: {task_id} (已重试 {task.retry_count} 次)",
             )
 
         # 重置任务状态为 pending
         task = task_service.retry_task(task_id)
 
         if not task:
-            raise HTTPException(
-                status_code=400,
-                detail=f"重试失败: {task_id}"
-            )
+            raise HTTPException(status_code=400, detail=f"重试失败: {task_id}")
 
         # 触发任务重新执行（后台异步执行）
         async def retry_execution():
@@ -336,13 +325,12 @@ async def retry_task(
             if loop.is_running():
                 logger.info(f"📋 [重试] 事件循环正在运行，创建后台任务: {task_id}")
                 background_task = loop.create_task(retry_execution())
-                logger.info(f"✅ [重试] 后台任务已创建: {task_id}, task={background_task}, done={background_task.done()}")
+                logger.info(
+                    f"✅ [重试] 后台任务已创建: {task_id}, task={background_task}, done={background_task.done()}"
+                )
             else:
                 logger.error(f"❌ [重试] 事件循环未运行: {task_id}")
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"内部错误: 事件循环未运行"
-                )
+                raise HTTPException(status_code=500, detail=f"内部错误: 事件循环未运行")
         except Exception as e:
             logger.error(f"❌ [重试] 创建后台任务失败: {task_id}, error={e}", exc_info=True)
             raise

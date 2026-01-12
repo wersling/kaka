@@ -501,7 +501,9 @@ class TestScenarioD_GitConflictHandling:
         # 验证失败
         assert result is not None
         assert result.success is False
-        assert "conflict" in result.error_message.lower() or "branch" in result.error_message.lower()
+        assert (
+            "conflict" in result.error_message.lower() or "branch" in result.error_message.lower()
+        )
 
 
 @pytest.mark.asyncio
@@ -767,6 +769,7 @@ class TestScenarioI_ConcurrentIssueProcessing:
         """
         # Mock GitService 以返回不同的分支名
         import time
+
         branch_counter = [0]
 
         def create_branch_with_unique_name(issue_number):
@@ -802,8 +805,7 @@ class TestScenarioI_ConcurrentIssueProcessing:
 
         # 并发执行
         tasks = [
-            e2e_webhook_handler.handle_event(event_type="issues", data=event)
-            for event in events
+            e2e_webhook_handler.handle_event(event_type="issues", data=event) for event in events
         ]
         results = await asyncio.gather(*tasks)
 
@@ -850,8 +852,7 @@ class TestScenarioI_ConcurrentIssueProcessing:
 
         # 快速连续执行（不加延迟）
         tasks = [
-            e2e_webhook_handler.handle_event(event_type="issues", data=event)
-            for event in events
+            e2e_webhook_handler.handle_event(event_type="issues", data=event) for event in events
         ]
         results = await asyncio.gather(*tasks)
 
@@ -903,11 +904,7 @@ class TestScenarioJ_ExternalServiceIntegration:
         import hmac
         import hashlib
 
-        signature = "sha256=" + hmac.new(
-            secret.encode(),
-            payload,
-            hashlib.sha256
-        ).hexdigest()
+        signature = "sha256=" + hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
         # 验证应该通过
         is_valid = verify_webhook_signature(payload, signature, secret)
@@ -939,7 +936,7 @@ class TestScenarioJ_ExternalServiceIntegration:
 
         # 由于实际的服务初始化会连接外部服务，我们只验证延迟初始化机制
         # 而不是真正初始化服务
-        assert hasattr(handler, '_init_services'), "应该有_init_services方法"
+        assert hasattr(handler, "_init_services"), "应该有_init_services方法"
         assert callable(handler._init_services), "_init_services应该是可调用的"
 
     async def test_data_flow_between_services(

@@ -73,10 +73,7 @@ class RepositoryConfig(BaseModel):
     def validate_path(cls, v: str) -> Path:
         """验证仓库路径"""
         if not v or v.startswith("${"):
-            raise ValueError(
-                "REPO_PATH 未配置。"
-                "请在 .env 文件中设置 REPO_PATH 环境变量。"
-            )
+            raise ValueError("REPO_PATH 未配置。" "请在 .env 文件中设置 REPO_PATH 环境变量。")
         path = Path(v).expanduser().resolve()
         if not path.exists():
             raise ValueError(f"仓库路径不存在: {path}")
@@ -193,7 +190,7 @@ def load_env_var(value: str) -> str:
         return value
 
     # 匹配 ${VAR_NAME} 或 ${VAR_NAME:default}
-    pattern = r'\$\{([^}:]+)(?::([^}]*))?\}'
+    pattern = r"\$\{([^}:]+)(?::([^}]*))?\}"
 
     def replace_env(match: re.Match) -> str:
         var_name = match.group(1)
@@ -273,9 +270,7 @@ def get_config() -> Config:
         try:
             _config = load_config()
         except Exception as e:
-            raise RuntimeError(
-                f"配置未初始化，且无法从默认路径加载: {e}"
-            ) from e
+            raise RuntimeError(f"配置未初始化，且无法从默认路径加载: {e}") from e
     return _config
 
 

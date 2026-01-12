@@ -109,7 +109,9 @@ class TestCheckRateLimit:
 
         assert result is True
 
-    def test_check_rate_limit_exactly_at_threshold(self, github_service, mock_github, mock_rate_limit):
+    def test_check_rate_limit_exactly_at_threshold(
+        self, github_service, mock_github, mock_rate_limit
+    ):
         """
         测试：配额恰好等于阈值
 
@@ -124,7 +126,9 @@ class TestCheckRateLimit:
 
         assert result is True
 
-    def test_check_rate_limit_below_threshold(self, github_service, mock_github, mock_rate_limit, caplog):
+    def test_check_rate_limit_below_threshold(
+        self, github_service, mock_github, mock_rate_limit, caplog
+    ):
         """
         测试：配额低于阈值
 
@@ -142,7 +146,11 @@ class TestCheckRateLimit:
             result = github_service._check_rate_limit(min_remaining=100)
 
         # 应该记录警告
-        assert any("速率限制" in record.message for record in caplog.records if record.levelname == "WARNING")
+        assert any(
+            "速率限制" in record.message
+            for record in caplog.records
+            if record.levelname == "WARNING"
+        )
 
         # 剩余 >= 10，应该返回 True（但记录了警告）
         assert result is True
@@ -162,7 +170,11 @@ class TestCheckRateLimit:
             result = github_service._check_rate_limit(min_remaining=100)
 
         assert result is False
-        assert any("速率限制" in record.message for record in caplog.records if record.levelname == "WARNING")
+        assert any(
+            "速率限制" in record.message
+            for record in caplog.records
+            if record.levelname == "WARNING"
+        )
 
     def test_check_rate_limit_failure_to_get_limits(self, github_service, mock_github, caplog):
         """
@@ -178,7 +190,11 @@ class TestCheckRateLimit:
             result = github_service._check_rate_limit(min_remaining=100)
 
         assert result is True
-        assert any("无法获取速率限制信息" in record.message for record in caplog.records if record.levelname == "WARNING")
+        assert any(
+            "无法获取速率限制信息" in record.message
+            for record in caplog.records
+            if record.levelname == "WARNING"
+        )
 
     def test_check_rate_limit_empty_response(self, github_service, mock_github, caplog):
         """
@@ -195,7 +211,11 @@ class TestCheckRateLimit:
                 result = github_service._check_rate_limit(min_remaining=100)
 
             assert result is True
-            assert any("无法获取速率限制信息" in record.message for record in caplog.records if record.levelname == "WARNING")
+            assert any(
+                "无法获取速率限制信息" in record.message
+                for record in caplog.records
+                if record.levelname == "WARNING"
+            )
 
 
 # =============================================================================
@@ -206,7 +226,9 @@ class TestCheckRateLimit:
 class TestRateLimitInCreatePR:
     """测试 create_pull_request 中的速率限制检查"""
 
-    def test_create_pr_calls_check_rate_limit(self, github_service, mock_repo, mock_github, mock_rate_limit):
+    def test_create_pr_calls_check_rate_limit(
+        self, github_service, mock_repo, mock_github, mock_rate_limit
+    ):
         """
         测试：create_pull_request 应该调用速率限制检查
 
@@ -235,7 +257,9 @@ class TestRateLimitInCreatePR:
             # 验证调用了一次，默认参数 min_remaining=100
             mock_check.assert_called_once_with(min_remaining=100)
 
-    def test_create_pr_with_low_rate_limit_continues(self, github_service, mock_repo, mock_github, mock_rate_limit):
+    def test_create_pr_with_low_rate_limit_continues(
+        self, github_service, mock_repo, mock_github, mock_rate_limit
+    ):
         """
         测试：即使速率限制较低，如果 >= 10 也继续
 
@@ -272,7 +296,9 @@ class TestRateLimitInCreatePR:
 class TestRateLimitWaiting:
     """测试速率限制等待逻辑"""
 
-    def test_wait_calculation_when_near_limit(self, github_service, mock_github, mock_rate_limit, caplog):
+    def test_wait_calculation_when_near_limit(
+        self, github_service, mock_github, mock_rate_limit, caplog
+    ):
         """
         测试：接近限额时计算等待时间
 
@@ -303,7 +329,11 @@ class TestRateLimitWaiting:
         assert result is True  # 剩余 80 >= 10
 
         # 验证记录了速率限制警告
-        assert any("速率限制" in record.message for record in caplog.records if record.levelname == "WARNING")
+        assert any(
+            "速率限制" in record.message
+            for record in caplog.records
+            if record.levelname == "WARNING"
+        )
 
     def test_no_wait_when_sufficient_quota(self, github_service, mock_github, mock_rate_limit):
         """

@@ -21,6 +21,7 @@ class TestTaskLogsStream:
 
         # Mock TaskService 以避免数据库问题
         from unittest.mock import patch, MagicMock
+
         with patch("app.api.logs.TaskService") as mock_service_class:
             mock_instance = MagicMock()
             mock_instance.get_task_by_id.return_value = None  # 任务不存在
@@ -39,6 +40,7 @@ class TestTaskLogsStream:
         task_id = "test-task-002"
 
         from unittest.mock import patch, MagicMock
+
         with patch("app.api.logs.TaskService") as mock_service_class:
             mock_instance = MagicMock()
             mock_instance.get_task_by_id.return_value = None
@@ -57,6 +59,7 @@ class TestTaskLogsStream:
         task_id = "nonexistent-task"
 
         from unittest.mock import patch, MagicMock
+
         with patch("app.api.logs.TaskService") as mock_service_class:
             mock_instance = MagicMock()
             mock_instance.get_task_by_id.return_value = None
@@ -104,6 +107,7 @@ class TestLogsStreamBehavior:
         task_id = "test-task-format-006"
 
         from unittest.mock import patch, MagicMock
+
         with patch("app.api.logs.TaskService") as mock_service_class:
             mock_instance = MagicMock()
             mock_instance.get_task_by_id.return_value = None

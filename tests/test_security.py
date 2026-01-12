@@ -70,9 +70,7 @@ class TestSignatureForgeryAttacks:
 
         assert result is False, "伪造的签名应该被拒绝"
 
-    def test_signature_with_wrong_secret_rejected(
-        self, valid_payload, webhook_secret
-    ):
+    def test_signature_with_wrong_secret_rejected(self, valid_payload, webhook_secret):
         """
         测试：使用错误密钥生成的签名应该被拒绝
 
@@ -100,9 +98,7 @@ class TestSignatureForgeryAttacks:
             "sha256=" + "f" * 64,
         ],
     )
-    def test_common_forged_patterns_rejected(
-        self, forged_sig, valid_payload, webhook_secret
-    ):
+    def test_common_forged_patterns_rejected(self, forged_sig, valid_payload, webhook_secret):
         """
         测试：常见的伪造签名模式应该被拒绝
 
@@ -127,9 +123,7 @@ class TestSignatureForgeryAttacks:
 class TestSignatureReplayAttacks:
     """测试签名重放攻击防护"""
 
-    def test_replay_attack_detected(
-        self, valid_payload, valid_signature, webhook_secret
-    ):
+    def test_replay_attack_detected(self, valid_payload, valid_signature, webhook_secret):
         """
         测试：重放攻击检测（基础）
 
@@ -157,9 +151,7 @@ class TestSignatureReplayAttacks:
         assert result2 is True
         # TODO: 实现时间戳验证机制来防护重放攻击
 
-    def test_payload_tampering_in_replay(
-        self, valid_payload, webhook_secret
-    ):
+    def test_payload_tampering_in_replay(self, valid_payload, webhook_secret):
         """
         测试：重放时篡改 payload 应该被检测
 
@@ -189,9 +181,7 @@ class TestSignatureReplayAttacks:
             lambda p: p.replace(b"labeled", b"unlabeled"),  # 修改关键字段
         ],
     )
-    def test_various_payload_tampering_detected(
-        self, tamper_func, valid_payload, webhook_secret
-    ):
+    def test_various_payload_tampering_detected(self, tamper_func, valid_payload, webhook_secret):
         """
         测试：各种 payload 篡改方式都应该被检测
 
@@ -240,9 +230,7 @@ class TestSignatureTamperingAttacks:
 
         assert result is False, "位翻转的签名应该被拒绝"
 
-    def test_signature_prefix_tampering_rejected(
-        self, valid_payload, webhook_secret
-    ):
+    def test_signature_prefix_tampering_rejected(self, valid_payload, webhook_secret):
         """
         测试：签名前缀篡改应该被拒绝
 
@@ -266,13 +254,9 @@ class TestSignatureTamperingAttacks:
                 secret=webhook_secret,
             )
 
-            assert (
-                result is False
-            ), f"篡改前缀的签名 {tampered_sig[:10]}... 应该被拒绝"
+            assert result is False, f"篡改前缀的签名 {tampered_sig[:10]}... 应该被拒绝"
 
-    def test_signature_length_tampering_rejected(
-        self, valid_payload, webhook_secret
-    ):
+    def test_signature_length_tampering_rejected(self, valid_payload, webhook_secret):
         """
         测试：签名长度篡改应该被拒绝
 
@@ -325,9 +309,7 @@ class TestEmptyOrNoneSignature:
 
         assert result is False
 
-    def test_empty_string_signature_rejected(
-        self, valid_payload, webhook_secret
-    ):
+    def test_empty_string_signature_rejected(self, valid_payload, webhook_secret):
         """
         测试：空字符串签名应该被拒绝
 
@@ -343,9 +325,7 @@ class TestEmptyOrNoneSignature:
 
         assert result is False
 
-    def test_whitespace_only_signature_rejected(
-        self, valid_payload, webhook_secret
-    ):
+    def test_whitespace_only_signature_rejected(self, valid_payload, webhook_secret):
         """
         测试：仅包含空格的签名应该被拒绝
 
@@ -369,9 +349,7 @@ class TestEmptyOrNoneSignature:
             "sha256=\n\t",  # 前缀加换行符和制表符
         ],
     )
-    def test_signature_without_hash_rejected(
-        self, invalid_sig, valid_payload, webhook_secret
-    ):
+    def test_signature_without_hash_rejected(self, invalid_sig, valid_payload, webhook_secret):
         """
         测试：没有哈希值的签名应该被拒绝
 
@@ -396,9 +374,7 @@ class TestEmptyOrNoneSignature:
 class TestTimingAttackProtection:
     """测试时序攻击防护机制"""
 
-    def test_constant_time_comparison_used(
-        self, valid_payload, valid_signature, webhook_secret
-    ):
+    def test_constant_time_comparison_used(self, valid_payload, valid_signature, webhook_secret):
         """
         测试：应该使用恒定时间比较
 
@@ -464,9 +440,7 @@ class TestTimingAttackProtection:
         # 时间差异应该很小（< 1ms）
         time_diff = abs(valid_time - invalid_time) * 1000  # 转换为毫秒
 
-        assert (
-            time_diff < 1.0
-        ), f"时间差异过大: {time_diff:.3f}ms，可能存在时序攻击风险"
+        assert time_diff < 1.0, f"时间差异过大: {time_diff:.3f}ms，可能存在时序攻击风险"
 
 
 # =============================================================================

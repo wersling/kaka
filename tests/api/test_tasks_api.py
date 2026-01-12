@@ -31,7 +31,7 @@ class TestTasksListAPI:
                 "running": 0,
                 "completed": 0,
                 "failed": 0,
-                "cancelled": 0
+                "cancelled": 0,
             }
             mock_service_class.return_value = mock_instance
 
@@ -74,7 +74,7 @@ class TestTaskStatsAPI:
                 "running": 3,
                 "completed": 4,
                 "failed": 1,
-                "cancelled": 0
+                "cancelled": 0,
             }
             mock_service_class.return_value = mock_instance
 
@@ -104,7 +104,7 @@ class TestConcurrencyStatsAPI:
             mock_cm.get_stats.return_value = {
                 "max_concurrent": 5,
                 "current_running": 2,
-                "available": 3
+                "available": 3,
             }
 
             response = await async_client.get("/api/concurrency/stats")
@@ -176,7 +176,7 @@ class TestTasksAPISecurity:
                 "running": 0,
                 "completed": 0,
                 "failed": 0,
-                "cancelled": 0
+                "cancelled": 0,
             }
             mock_service_class.return_value = mock_instance
 

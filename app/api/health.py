@@ -121,19 +121,15 @@ async def check_claude_cli() -> ServiceCheck:
             return ServiceCheck(
                 healthy=False,
                 message="Claude Code CLI 未安装",
-                details={
-                    "提示": "请确保 Claude Code CLI 已正确安装并添加到 PATH"
-                },
+                details={"提示": "请确保 Claude Code CLI 已正确安装并添加到 PATH"},
             )
 
         # 尝试获取版本信息
         try:
             import subprocess
+
             result = subprocess.run(
-                [claude_path, "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5
+                [claude_path, "--version"], capture_output=True, text=True, timeout=5
             )
             version = result.stdout.strip() if result.returncode == 0 else "unknown"
         except (OSError, subprocess.TimeoutExpired, FileNotFoundError):

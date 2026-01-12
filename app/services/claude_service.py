@@ -148,9 +148,7 @@ Issue 内容:
                 # 记录重试日志
                 if task_service and task_id:
                     task_service.add_task_log(
-                        task_id,
-                        "INFO",
-                        f"Claude CLI 执行尝试 {attempt}/{self.max_retries}"
+                        task_id, "INFO", f"Claude CLI 执行尝试 {attempt}/{self.max_retries}"
                     )
 
                 result = await self._execute_claude(
@@ -214,8 +212,7 @@ Issue 内容:
         # 所有尝试都失败了
         execution_time = time.time() - start_time
         self.logger.error(
-            f"❌ AI 开发任务失败: Issue #{issue_number} "
-            f"(总耗时: {execution_time:.1f}s)"
+            f"❌ AI 开发任务失败: Issue #{issue_number} " f"(总耗时: {execution_time:.1f}s)"
         )
 
         return {
@@ -334,10 +331,12 @@ Issue 内容:
                                 assistant_messages.append(text)
                                 self.logger.debug(f"提取到 assistant 文本块，长度: {len(text)}")
                             elif block.get("type") == "tool_use":
-                                tools_used.append({
-                                    "name": block.get("name"),
-                                    "id": block.get("id"),
-                                })
+                                tools_used.append(
+                                    {
+                                        "name": block.get("name"),
+                                        "id": block.get("id"),
+                                    }
+                                )
                                 self.logger.debug(f"提取到 tool_use: {block.get('name')}")
 
                     elif msg_type == "result":
@@ -374,7 +373,9 @@ Issue 内容:
 
             # 聚合 assistant 输出
             output = "\n".join(assistant_messages).strip()
-            self.logger.info(f"聚合 assistant 输出: 文本块数={len(assistant_messages)}, 总长度={len(output)}")
+            self.logger.info(
+                f"聚合 assistant 输出: 文本块数={len(assistant_messages)}, 总长度={len(output)}"
+            )
 
             # 提取结果信息
             # 收紧成功判断逻辑，避免假阳性
@@ -400,18 +401,19 @@ Issue 内容:
                 ]
 
                 stderr_lines = [
-                    line.strip() for line in stderr_content.strip().split('\n')
-                    if line.strip()
+                    line.strip() for line in stderr_content.strip().split("\n") if line.strip()
                 ]
 
                 if stderr_lines:
                     # 统计警告行和错误行
                     warning_lines = [
-                        line for line in stderr_lines
+                        line
+                        for line in stderr_lines
                         if any(pattern in line for pattern in warning_patterns)
                     ]
                     error_lines = [
-                        line for line in stderr_lines
+                        line
+                        for line in stderr_lines
                         if any(pattern in line.lower() for pattern in error_patterns)
                     ]
 
@@ -433,17 +435,17 @@ Issue 内容:
             # 检查 result 消息的状态（如果存在）
             result_status = result_message.get("status", "") if result_message else ""
             result_indicates_success = (
-                not result_status or  # 无状态字段
-                result_status == "success" or  # 明确成功
-                result_status == "completed"  # 明确完成
+                not result_status  # 无状态字段
+                or result_status == "success"  # 明确成功
+                or result_status == "completed"  # 明确完成
             )
 
             # 判断成功
             is_success = (
-                returncode_allowed and
-                has_valid_output and
-                result_indicates_success and
-                not has_real_error
+                returncode_allowed
+                and has_valid_output
+                and result_indicates_success
+                and not has_real_error
             )
 
             result_data = {
@@ -480,18 +482,18 @@ Issue 内容:
                 if has_real_error:
                     failure_reasons.append("检测到错误输出")
 
-                self.logger.warning(
-                    f"❌ 判定为失败: {', '.join(failure_reasons)}"
-                )
+                self.logger.warning(f"❌ 判定为失败: {', '.join(failure_reasons)}")
 
             # 从 result 消息中提取额外信息
             if result_message:
-                result_data.update({
-                    "cost_usd": result_message.get("cost_usd", 0.0),
-                    "duration_ms": result_message.get("duration_ms", 0),
-                    "num_turns": result_message.get("num_turns", 0),
-                    "session_id": result_message.get("session_id", ""),
-                })
+                result_data.update(
+                    {
+                        "cost_usd": result_message.get("cost_usd", 0.0),
+                        "duration_ms": result_message.get("duration_ms", 0),
+                        "num_turns": result_message.get("num_turns", 0),
+                        "session_id": result_message.get("session_id", ""),
+                    }
+                )
                 self.logger.info(
                     f"Claude 执行完成: "
                     f"成本=${result_message.get('cost_usd', 0):.4f}, "

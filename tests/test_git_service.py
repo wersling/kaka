@@ -81,6 +81,7 @@ def git_service(tmpdir, mock_repo, mock_config):
 
     # 清理
     import shutil
+
     if test_path.exists():
         shutil.rmtree(test_path)
 
@@ -120,6 +121,7 @@ def git_service_real_repo(tmpdir, mock_config):
 
     # 清理
     import shutil
+
     if repo_path.exists():
         shutil.rmtree(repo_path)
 
