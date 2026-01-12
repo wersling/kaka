@@ -19,7 +19,7 @@ TEST_LABEL ?= ai-dev
 
 ## 🎯 帮助信息
 help: ## 显示帮助信息
-	@echo "$(BLUE)Kaka AI Dev - 开发者命令$(NC)"
+	@echo "$(BLUE)Kaka - 开发者命令$(NC)"
 	@echo ""
 	@echo "$(GREEN)📝 用户命令 (使用 kaka CLI):$(NC)"
 	@echo "  kaka start      启动服务"
