@@ -114,6 +114,8 @@ kaka/
 │   ├── db/                     # 数据库
 │   │   ├── database.py         # 数据库连接
 │   │   └── models.py           # ORM 模型
+│   ├── core/                   # 核心功能
+│   │   └── error_handlers.py   # 统一异常处理
 │   └── utils/                  # 工具函数
 │       ├── logger.py           # 日志工具
 │       ├── validators.py       # Webhook 验证器
@@ -127,6 +129,9 @@ kaka/
 ├── templates/                  # HTML 模板
 │   ├── dashboard_enhanced.html
 │   └── config_wizard.html
+├── .vscode/                    # VSCode 配置
+│   ├── settings.json           # 编辑器设置
+│   └── launch.json             # 调试配置
 ├── requirements.txt            # Python 依赖
 ├── pyproject.toml             # 项目配置
 └── Makefile                    # 自动化命令
@@ -136,13 +141,14 @@ kaka/
 
 | 模块 | 职责 |
 |------|------|
-| `app/main.py` | FastAPI 应用入口，路由注册，中间件配置 |
+| `app/main.py` | FastAPI 应用入口，路由注册，中间件配置，生命周期管理 |
 | `app/config.py` | 配置加载和管理，使用 Pydantic Settings |
 | `app/models/` | Pydantic 数据模型定义 |
 | `app/services/` | 核心业务逻辑实现 |
 | `app/api/` | API 路由和端点定义 |
-| `app/db/` | 数据库模型和连接 |
-| `app/utils/` | 工具函数和辅助类 |
+| `app/db/` | 数据库模型和连接管理 |
+| `app/core/` | 核心功能模块（异常处理等） |
+| `app/utils/` | 工具函数和辅助类（日志、验证、并发） |
 
 ---
 
@@ -287,3 +293,4 @@ class Task(Base):
 
 - [使用指南](USAGE.md) - 使用说明
 - [开发指南](DEVELOPMENT.md) - 开发文档
+- [日志系统](LOGGING.md) - 日志配置和使用

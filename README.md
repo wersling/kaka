@@ -6,7 +6,7 @@
 
 > 🚀 **一键安装，开箱即用** - 通过 GitHub Webhook 触发 Claude Code CLI 进行 AI 开发，实现从 Issue 到 PR 的完整自动化流程。
 
-## ✨ 特性
+## 特性
 
 - **智能 Webhook 接收** - 接收并验证 GitHub Webhook 事件
 - **多种触发方式** - 支持标签触发（`ai-dev`）和评论触发（`/ai develop`）
@@ -16,7 +16,7 @@
 - **实时监控** - 美观的 Dashboard 界面，实时追踪任务状态
 - **配置向导** - 5 分钟完成配置，无需复杂操作
 
-## 🚀 快速开始
+## 快速开始
 
 ### 方式 1：pip 安装（推荐）
 
@@ -81,15 +81,27 @@ kaka start
 
 **方式 2**：在 GitHub Issue 中评论 `/ai develop`
 
-## 📚 文档
+## 文档
 
 - [快速启动指南](docs/s/QUICKSTART.md) - 5 分钟上手教程
 - [API 文档](docs/API.md) - 完整 API 参考
 - [使用指南](docs/USAGE.md) - 使用说明和示例
 - [开发指南](docs/DEVELOPMENT.md) - 开发者文档
+- [架构文档](docs/ARCHITECTURE.md) - 系统架构设计
+- [日志系统](docs/LOGGING.md) - 日志配置和使用
+
+## 开发调试
+
+项目已配置完整的 VSCode 调试环境：
+
+1. 按 `F5` 启动调试
+2. 支持断点调试、热重载
+3. 多种调试模式可选
+
+详见 [`.vscode/launch.json`](.vscode/launch.json)
 
 
-## 📝 许可证
+## 许可证
 
 本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
 

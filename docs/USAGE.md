@@ -272,3 +272,4 @@ make check            # 运行所有检查
 
 - [配置说明](CONFIGURATION.md) - 详细配置指南
 - [开发指南](DEVELOPMENT.md) - 开发者文档
+- [日志系统](LOGGING.md) - 日志配置和使用

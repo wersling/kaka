@@ -42,7 +42,14 @@ cp .env.example .env
 
 ### 3. 启动开发服务器
 
-**使用 kaka CLI（推荐）**：
+**方式 1: 使用 VSCode 调试器（推荐）**
+
+1. 按 `F5` 或点击侧边栏的"运行和调试"
+2. 选择"运行 FastAPI (调试模式)"
+3. 服务将在 `http://localhost:8000` 启动
+4. 支持断点调试和热重载
+
+**方式 2: 使用 kaka CLI**
 
 ```bash
 # 配置服务
@@ -52,7 +59,7 @@ kaka configure
 kaka start --reload
 ```
 
-**或直接使用 uvicorn**：
+**方式 3: 直接使用 uvicorn**
 
 ```bash
 # 方式 1: 使用 uvicorn
@@ -366,6 +373,17 @@ git push origin feature/your-feature-name
 
 ## 调试技巧
 
+### VSCode 调试配置
+
+项目包含完整的 VSCode 调试配置，支持以下调试模式：
+
+1. **运行 FastAPI (调试模式)** - 启用热重载，支持断点调试
+2. **运行 FastAPI (无热重载)** - 稳定调试环境
+3. **运行 Python 文件** - 调试当前打开的文件
+4. **运行 pytest** - 调试测试用例
+
+配置文件：[`.vscode/launch.json`](../.vscode/launch.json)
+
 ### 启用调试模式
 
 在 `config/config.yaml` 中设置：
@@ -377,12 +395,26 @@ logging:
 
 ### 查看日志
 
+服务启动时会显示日志文件地址：
+
+```
+📝 日志文件: logs/kaka.log
+```
+
+查看日志的方式：
+
 ```bash
+# 实时查看日志
+tail -f logs/kaka.log
+
+# 查看最近 20 行
+tail -n 20 logs/kaka.log
+
 # 使用 kaka CLI
 kaka logs
 
-# 或直接查看日志文件
-tail -f logs/kaka.log
+# 只看错误日志
+grep ERROR logs/kaka.log
 ```
 
 ### 使用 Python 调试器
@@ -404,4 +436,5 @@ import ipdb; ipdb.set_trace()
 - [配置说明](CONFIGURATION.md) - 详细配置
 - [部署指南](DEPLOYMENT.md) - 生产部署
 - [架构文档](ARCHITECTURE.md) - 系统架构
+- [日志系统](LOGGING.md) - 日志配置和使用
 - [测试文档](TESTING.md) - 测试策略
