@@ -1,6 +1,6 @@
-# Kaka Auto 发布指南
+# Kaka 发布指南
 
-本文档说明如何将 Kaka Auto 发布到 PyPI。
+本文档说明如何将 Kaka 发布到 PyPI。
 
 ## 📋 前置条件
 

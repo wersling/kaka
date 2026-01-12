@@ -1,5 +1,5 @@
 #!/bin/bash
-# Kaka Auto - 开发环境初始化脚本
+# Kaka - 开发环境初始化脚本
 
 set -e  # 遇到错误立即退出
 
@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════╗"
-echo "║   🚀 Kaka Auto - 开发环境初始化      ║"
+echo "║   🚀 Kaka - 开发环境初始化      ║"
 echo "╚═══════════════════════════════════════╝"
 echo -e "${NC}"
 echo ""
@@ -65,8 +65,8 @@ echo -e "${GREEN}✅ pip 升级完成${NC}"
 # 安装项目（开发模式）
 echo ""
 echo "📦 安装项目（开发模式）..."
-pip install -e ".[dev]"
-echo -e "${GREEN}✅ 项目安装完成（含开发依赖）${NC}"
+pip install -e .
+echo -e "${GREEN}✅ 项目安装完成${NC}"
 
 # 创建必要的目录
 echo ""
