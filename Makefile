@@ -1,7 +1,5 @@
-.PHONY: help test lint format clean coverage docker-build docker-run \
+.PHONY: help test lint format clean coverage \
 	test-integration-live test-webhook-live trigger test-webhook-status \
-	test-performance test-benchmark test-stress test-concurrency \
-	perf-report perf-check perf-quick perf-memory \
 	trigger-api test-webhook-batch
 
 # 默认目标
@@ -64,10 +62,10 @@ test-integration: ## 运行集成测试
 	@echo "$(BLUE)🧪 运行集成测试...$(NC)"
 	@python -m pytest tests/test_integration.py -v
 
-## 🧪 真实环境集成测试（完整工作流）
-test-integration-live: ## 运行真实环境集成测试（完整工作流）
+## 🧪 真实环境集成测试
+test-integration-live: ## 运行真实环境集成测试
 	@echo "$(BLUE)🧪 运行真实环境集成测试...$(NC)"
-	make clean
+	@$(MAKE) clean
 	@python scripts/test_integration_live.py --start-service --stop-service
 
 ## 📊 测试覆盖率
@@ -78,7 +76,7 @@ coverage: ## 生成测试覆盖率报告
 
 ## 📈 查看覆盖率（浏览器）
 coverage-open: coverage ## 生成并在浏览器中打开覆盖率报告
-	@open htmlcov/index.html 2>/dev/null || python -m webbrowser htmlcov/index.html
+	@open htmlcov/index.html 2>/dev/null || true
 
 ## 🔍 代码检查
 lint: ## 运行代码检查（flake8）
@@ -138,66 +136,6 @@ docker-clean: ## 清理 Docker 镜像和容器
 	@docker rmi kaka:latest 2>/dev/null || true
 	@echo "$(GREEN)✅ Docker 清理完成！$(NC)"
 
-# ===== 性能测试 =====
-
-## 🚀 运行所有性能测试
-test-performance: ## 运行完整性能测试套件
-	@echo "运行完整性能测试套件..."
-	@python -m pytest tests/test_performance.py -v --tb=short --benchmark-skip
-
-## 📊 运行性能基准测试
-test-benchmark: ## 运行性能基准测试
-	@echo "运行性能基准测试..."
-	@python -m pytest tests/test_performance.py::TestPerformanceBaselines \
-		-v \
-		--benchmark-only \
-		--benchmark-columns=min,max,mean,stddev,median,ops,iqr \
-		--benchmark-sort=name
-
-## 🔄 运行并发测试
-test-concurrency: ## 运行并发性能测试
-	@echo "运行并发性能测试..."
-	@python -m pytest tests/test_performance.py::TestConcurrencyPerformance \
-		-v -s --tb=short --benchmark-skip
-
-## 💪 运行压力测试
-test-stress: ## 运行压力测试
-	@echo "运行压力测试..."
-	@python -m pytest tests/test_performance.py::TestStressTesting \
-		-v -s --tb=short --benchmark-skip
-
-## 📈 生成性能报告
-perf-report: ## 生成性能测试报告
-	@echo "生成性能测试报告..."
-	@python -m pytest tests/test_performance.py::TestPerformanceBaselines \
-		--benchmark-only \
-		--benchmark-autosave \
-		--benchmark-save=data/baseline \
-		--benchmark-json=reports/benchmark_results.json
-	@echo "✓ 基准数据已保存到 reports/benchmark_results.json"
-
-## 🔍 性能回归检测
-perf-check: ## 检测性能回归
-	@echo "检测性能回归..."
-	@python -m pytest tests/test_performance.py::TestPerformanceBaselines \
-		--benchmark-only \
-		--benchmark-compare-fail=mean:5% \
-		--benchmark-save=data/baseline \
-		|| echo "⚠️  检测到性能退化！"
-
-## ⚡ 快速性能检查
-perf-quick: ## 快速性能检查（仅关键指标）
-	@echo "快速性能检查..."
-	@python -m pytest tests/test_performance.py \
-		-k "signature_verification or webhook_event_routing or concurrent_webhook" \
-		-v --tb=line --benchmark-skip
-
-## 🧠 内存泄漏检测
-perf-memory: ## 检测内存泄漏
-	@echo "检测内存泄漏..."
-	@python -m pytest tests/test_performance.py::TestStressTesting::test_memory_leak_detection \
-		-v -s --benchmark-skip
-
 # ===== Webhook 测试 =====
 
 ## 🚀 触发真实环境 Webhook 测试
@@ -243,44 +181,23 @@ test-webhook-live: ## 触发真实环境的 Webhook 测试（对 GitHub Issue �
 trigger: test-webhook-live ## 触发 Webhook 的快捷命令
 
 ## 🌐 使用 curl 直接调用 GitHub API
-trigger-api: ## 使用 curl 直接调用 GitHub API 添加标签（需要 .env 中的 GITHUB_TOKEN 有足够权限）
+trigger-api: ## 使用 curl 直接调用 GitHub API 添加标签
 	@echo "$(BLUE)🚀 通过 API 触发 Webhook...$(NC)"
 	@echo "$(BLUE)📋 目标: $(GITHUB_OWNER)/$(GITHUB_REPO)#$(ISSUE_NUMBER)$(NC)"
 	@echo ""
-	@if [ ! -f .env ]; then \
-		echo "$(YELLOW)❌ .env 文件不存在$(NC)"; \
-		exit 1; \
-	fi
-	@GITHUB_TOKEN=$$(grep "^GITHUB_TOKEN=" .env | cut -d'=' -f2-); \
+	@GITHUB_TOKEN=$$(grep "^GITHUB_TOKEN=" .env 2>/dev/null | cut -d'=' -f2-); \
 	if [ -z "$$GITHUB_TOKEN" ]; then \
 		echo "$(YELLOW)❌ GITHUB_TOKEN 未设置$(NC)"; \
 		exit 1; \
-	fi; \
-	echo "$(BLUE)🏷️  处理标签 '$(TEST_LABEL)'...$(NC)"; \
-	echo "$(YELLOW)   获取当前标签...$(NC)"; \
-	LABELS=$$(curl -s -H "Authorization: token $$GITHUB_TOKEN" \
-		-H "Accept: application/vnd.github.v3+json" \
-		"https://api.github.com/repos/$(GITHUB_OWNER)/$(GITHUB_REPO)/issues/$(ISSUE_NUMBER)" \
-		| jq -r '.labels | map(.name) | join(",")'); \
-	echo "     当前标签: $$LABELS"; \
-	echo "$(YELLOW)   删除旧标签（如果存在）...$(NC)"; \
-	curl -s -X DELETE \
-		-H "Authorization: token $$GITHUB_TOKEN" \
-		-H "Accept: application/vnd.github.v3+json" \
-		"https://api.github.com/repos/$(GITHUB_OWNER)/$(GITHUB_REPO)/issues/$(ISSUE_NUMBER)/labels/$(TEST_LABEL)" \
-		> /dev/null 2>&1 || echo "     标签不存在，跳过删除"; \
-	sleep 1; \
-	echo "$(GREEN)   ✅ 添加标签 '$(TEST_LABEL)'...$(NC)"; \
-	curl -s -X POST \
+	fi
+	@echo "$(BLUE)🏷️  添加标签 '$(TEST_LABEL)'...$(NC)"
+	@curl -s -X POST \
 		-H "Authorization: token $$GITHUB_TOKEN" \
 		-H "Accept: application/vnd.github.v3+json" \
 		"https://api.github.com/repos/$(GITHUB_OWNER)/$(GITHUB_REPO)/issues/$(ISSUE_NUMBER)/labels" \
-		-d '{"labels":["$(TEST_LABEL)"]}' \
-		| jq -r '.[] | "     添加成功: " + .name'; \
-	echo ""; \
-	echo "$(GREEN)✅ Webhook 触发成功！$(NC)"; \
-	echo "$(BLUE)📊 查看 Issue:$(NC)"; \
-	echo "   https://github.com/$(GITHUB_OWNER)/$(GITHUB_REPO)/issues/$(ISSUE_NUMBER)"
+		-d '{"labels":["$(TEST_LABEL)"]}'
+	@echo ""
+	@echo "$(GREEN)✅ Webhook 触发成功！$(NC)"
 
 ## 📋 查看 Webhook 测试 Issue 状态
 test-webhook-status: ## 查看测试 Issue 的标签状态
