@@ -44,7 +44,11 @@ kaka start
 git clone https://github.com/wersling/kaka.git
 cd kaka
 
-# 运行初始化脚本（自动创建 venv、安装依赖、配置环境）
+# 运行初始化脚本（推荐）
+# ✅ 自动创建 venv
+# ✅ 自动安装所有依赖（开发工具 + 发布工具）
+# ✅ 自动创建必要目录
+# ✅ 引导配置环境
 ./dev_setup.sh
 
 # 启动服务
@@ -58,8 +62,11 @@ kaka start
 python3 -m venv venv
 source venv/bin/activate
 
-# 安装
-pip install -e .
+# 安装（包含所有工具）
+pip install -e ".[all]"
+
+# 或只安装开发工具
+pip install -e ".[dev]"
 
 # 配置环境
 kaka configure

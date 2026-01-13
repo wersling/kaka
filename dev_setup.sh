@@ -67,8 +67,8 @@ echo -e "${GREEN}✅ pip 升级完成${NC}"
 # 安装项目（开发模式）
 echo ""
 echo "📦 安装项目（开发模式）..."
-pip install -e .
-echo -e "${GREEN}✅ 项目安装完成${NC}"
+pip install -e ".[all]"
+echo -e "${GREEN}✅ 项目安装完成（包含开发工具和发布工具）${NC}"
 
 # 创建必要的目录
 echo ""

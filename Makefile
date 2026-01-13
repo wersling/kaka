@@ -1,6 +1,6 @@
 .PHONY: help test lint format clean coverage \
 	test-integration-live test-webhook-live trigger test-webhook-status \
-	trigger-api test-webhook-batch
+	trigger-api test-webhook-batch publish-test publish
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -219,3 +219,30 @@ test-webhook-batch: ## 批量触发 Webhook（使用: make test-webhook-batch CO
 		fi; \
 	done
 	@echo "$(GREEN)✅ 批量触发完成！$(NC)"
+
+## 📦 发布到 TestPyPI（测试）
+publish-test: ## 发布包到 TestPyPI 用于测试
+	@echo "$(BLUE)📦 发布到 TestPyPI...$(NC)"
+	@echo "$(YELLOW)⚠️  确保已配置 TestPyPI 认证$(NC)"
+	@rm -rf dist/ build/ *.egg-info 2>/dev/null || true
+	@python -m build
+	@twine check dist/*
+	@echo "$(BLUE)📤 上传到 TestPyPI...$(NC)"
+	@twine upload --repository testpypi dist/*
+	@echo "$(GREEN)✅ 已发布到 TestPyPI!$(NC)"
+	@echo "$(BLUE)📦 测试安装:$(NC)"
+	@echo "   pip install --index-url https://test.pypi.org/simple/ kaka-auto"
+
+## 🚀 发布到 PyPI（正式）
+publish: ## 发布包到官方 PyPI
+	@echo "$(BLUE)🚀 发布到官方 PyPI...$(NC)"
+	@echo "$(YELLOW)⚠️  确保已配置 PyPI 认证$(NC)"
+	@echo "$(YELLOW)⚠️  确保版本号已更新$(NC)"
+	@rm -rf dist/ build/ *.egg-info 2>/dev/null || true
+	@python -m build
+	@twine check dist/*
+	@echo "$(BLUE)📤 上传到 PyPI...$(NC)"
+	@twine upload dist/*
+	@echo "$(GREEN)✅ 已发布到 PyPI!$(NC)"
+	@echo "$(BLUE)📦 查看包:$(NC)"
+	@echo "   https://pypi.org/project/kaka-auto/"

@@ -17,6 +17,25 @@
 
 ### 1. 创建开发环境
 
+**方式 1：使用初始化脚本（推荐）**
+
+```bash
+# 克隆项目
+git clone https://github.com/wersling/kaka.git
+cd kaka
+
+# 运行初始化脚本
+./dev_setup.sh
+```
+
+脚本会自动完成：
+- ✅ 创建虚拟环境
+- ✅ 安装所有依赖（开发工具 + 发布工具）
+- ✅ 创建必要目录
+- ✅ 引导配置环境
+
+**方式 2：手动安装**
+
 ```bash
 # 克隆项目
 git clone https://github.com/wersling/kaka.git
@@ -26,8 +45,11 @@ cd kaka
 python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 安装依赖（开发模式）
-pip install -e .
+# 安装依赖（包含所有工具）
+pip install -e ".[all]"
+
+# 或只安装开发工具
+pip install -e ".[dev]"
 ```
 
 ### 2. 配置开发环境变量

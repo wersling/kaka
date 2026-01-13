@@ -48,6 +48,17 @@ dev = [
     "mypy>=1.7.1",
 ]
 
+# 发布工具依赖
+publish = [
+    "build>=1.0.0",
+    "twine>=4.0.0",
+]
+
+# 所有开发依赖（包括发布工具）
+all = [
+    "kaka-auto[dev,publish]",
+]
+
 [project.urls]
 Homepage = "https://github.com/wersling/kaka"
 Repository = "https://github.com/wersling/kaka"
