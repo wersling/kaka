@@ -3,14 +3,16 @@
 
 set -e  # 遇到错误立即退出
 
-# 莫兰迪深色系
-GREEN='\033[0;38;5;71m'      # #5F8700 - 深橄榄绿
-BLUE='\033[0;38;5;25m'       # #005F87 - 深海蓝
-YELLOW='\033[0;38;5;136m'    # #AF8700 - 深芥末黄
-GRAY='\033[0;38;5;245m'      # #8A8A8A - 中性灰
+# 明亮莫兰迪色系
+PINK='\033[0;38;5;177m'      # #D7AFD7 - 明亮莫兰迪粉紫
+GREEN='\033[0;38;5;158m'     # #AFD7D7 - 明亮莫兰迪薄荷绿
+BLUE='\033[0;38;5;117m'      # #87D7FF - 明亮莫兰迪天蓝
+YELLOW='\033[0;38;5;228m'    # #FFD7D7 - 明亮莫兰迪暖黄
+RED='\033[0;38;5;211m'       # #D787AF - 明亮莫兰迪玫瑰红
+GRAY='\033[0;38;5;145m'      # #AFD7CF - 明亮莫兰迪薰衣草
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}"
+echo -e "${PINK}"
 echo "╔═══════════════════════════════════════╗"
 echo "║   🚀 Kaka - 开发环境初始化      ║"
 echo "╚═══════════════════════════════════════╝"
@@ -20,7 +22,7 @@ echo ""
 # 检查 Python 版本
 echo "📋 检查 Python 版本..."
 if ! command -v python &> /dev/null; then
-    echo -e "${YELLOW}❌ 未找到 Python 3${NC}"
+    echo -e "${RED}❌ 未找到 Python 3${NC}"
     echo "请先安装 Python 3.11 或更高版本"
     exit 1
 fi
@@ -34,8 +36,8 @@ PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d'.' -f1)
 PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d'.' -f2)
 
 if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]); then
-    echo -e "${YELLOW}❌ Python 版本不符合要求: ${PYTHON_VERSION}${NC}"
-    echo -e "${YELLOW}项目需要 Python 3.11 或更高版本${NC}"
+    echo -e "${RED}❌ Python 版本不符合要求: ${PYTHON_VERSION}${NC}"
+    echo -e "${RED}项目需要 Python 3.11 或更高版本${NC}"
     exit 1
 fi
 
@@ -107,10 +109,10 @@ echo "  1. 激活虚拟环境（如果还没激活）:"
 echo -e "     ${BLUE}source venv/bin/activate${NC}"
 echo ""
 echo "  2. 启动开发服务器:"
-echo -e "     ${BLUE}kaka start${NC}"
+echo -e "     ${PINK}kaka start${NC}"
 echo ""
 echo "  3. 运行测试:"
-echo -e "     ${BLUE}make test${NC}"
+echo -e "     ${PINK}make test${NC}"
 echo ""
 echo "📚 更多信息请参考 README.md"
 echo ""

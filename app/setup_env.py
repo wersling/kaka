@@ -19,23 +19,25 @@ from typing import Optional
 
 
 class Colors:
-    """终端颜色常量"""
+    """终端颜色常量 - 明亮莫兰迪色系"""
 
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKCYAN = "\033[96m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
+    # 明亮莫兰迪色系 - 清新、明亮、柔和
+    HEADER = "\033[38;5;177m"      # 明亮莫兰迪粉紫
+    OKBLUE = "\033[38;5;117m"      # 明亮莫兰迪天蓝
+    OKCYAN = "\033[38;5;152m"      # 明亮莫兰迪青绿
+    OKGREEN = "\033[38;5;158m"     # 明亮莫兰迪薄荷绿
+    WARNING = "\033[38;5;228m"     # 明亮莫兰迪暖黄
+    FAIL = "\033[38;5;211m"        # 明亮莫兰迪玫瑰红
+    INFO = "\033[38;5;145m"        # 明亮莫兰迪薰衣草
+    ENDC = "\033[0m"               # 重置颜色
+    BOLD = "\033[1m"               # 粗体
+    UNDERLINE = "\033[4m"          # 下划线
 
 
 def print_header(text: str) -> None:
     """打印标题"""
     print(f"\n{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}")
-    print(f"{Colors.HEADER}{Colors.BOLD}{text:^70}{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}{text:^10}{Colors.ENDC}")
     print(f"{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
 
 
@@ -56,7 +58,7 @@ def print_warning(text: str) -> None:
 
 def print_info(text: str) -> None:
     """打印信息消息"""
-    print(f"{Colors.OKCYAN}ℹ {text}{Colors.ENDC}")
+    print(f"{Colors.INFO}ℹ {text}{Colors.ENDC}")
 
 
 def input_required(prompt: str, default: Optional[str] = None) -> str:
@@ -621,7 +623,7 @@ def print_next_steps(config: dict) -> None:
 
 async def main():
     """主函数"""
-    print_header("AI 开发调度服务 - 环境配置向导")
+    print_header("Kaka：环境配置向导")
 
     print_info("本向导将帮助您配置 .env 文件")
     print("  所需配置项：")
@@ -664,6 +666,55 @@ async def main():
 
 
 if __name__ == "__main__":
+    import asyncio
+
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print()
+        print_warning("\n配置已取消")
+        sys.exit(1)
+    except Exception as e:
+        print()
+        print_error(f"配置失败: {e}")
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)
+
+
+def test_morandi_colors():
+    """测试明亮莫兰迪色系效果"""
+    print("\n" + "=" * 70)
+    print("明亮莫兰迪色系测试 (Bright Morandi Color Scheme)")
+    print("=" * 70 + "\n")
+
+    print(f"{Colors.HEADER}明亮莫兰迪粉紫 (HEADER){Colors.ENDC}")
+    print(f"{Colors.OKBLUE}明亮莫兰迪天蓝 (OKBLUE){Colors.ENDC}")
+    print(f"{Colors.OKCYAN}明亮莫兰迪青绿 (OKCYAN){Colors.ENDC}")
+    print(f"{Colors.OKGREEN}明亮莫兰迪薄荷绿 (OKGREEN){Colors.ENDC}")
+    print(f"{Colors.WARNING}明亮莫兰迪暖黄 (WARNING){Colors.ENDC}")
+    print(f"{Colors.FAIL}明亮莫兰迪玫瑰红 (FAIL){Colors.ENDC}")
+    print(f"{Colors.INFO}明亮莫兰迪薰衣草 (INFO){Colors.ENDC}")
+
+    print("\n" + "-" * 70 + "\n")
+
+    print("实际使用效果：\n")
+    print_header("这是一个标题 (HEADER)")
+    print_success("这是一个成功消息 (SUCCESS)")
+    print_error("这是一个错误消息 (ERROR)")
+    print_warning("这是一个警告消息 (WARNING)")
+    print_info("这是一个信息消息 (INFO)")
+
+    print("\n" + "=" * 70 + "\n")
+
+
+if __name__ == "__main__":
+    # 如果传入 --test-colors 参数，则测试颜色
+    if len(sys.argv) > 1 and sys.argv[1] == "--test-colors":
+        test_morandi_colors()
+        sys.exit(0)
+
     import asyncio
 
     try:
