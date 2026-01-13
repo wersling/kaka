@@ -2,6 +2,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
+[![PyPI Version](https://img.shields.io/pypi/v/kaka-auto.svg)](https://pypi.org/project/kaka-auto/)
 [![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
 
 > 🚀 **一键安装，开箱即用** - 通过 GitHub Webhook 触发 Claude Code CLI 进行 AI 开发，实现从 Issue 到 PR 的完整自动化流程。
@@ -33,6 +34,8 @@ kaka configure
 # 启动服务
 kaka start
 ```
+
+📦 **PyPI 页面**: https://pypi.org/project/kaka-auto/
 
 ### 方式 2：从源码安装（开发模式）
 
